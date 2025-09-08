@@ -1,0 +1,595 @@
+# 🔍 Análisis y Corrección del Diagrama PlantUML - Sistema de Combustible
+
+## 📊 Problemas Identificados en el Diagrama Actual
+
+### 1. **❌ Inconsistencias de Tipos de Datos**
+
+#### **Problemas Encontrados:**
+```plantuml
+entity Usuario {
+  *id_usuario : INT <<PK>>
+  password : VARCHAR(255) NOT NULL
+}
+
+entity ConsumoCombustible {
+  litros_cargados : DECIMAL(10,2) NOT NULL
+}
+```
+
+#### **❌ Problemas:**
+- **INT** para IDs principales → Limitado a ~2 mil millones de registros
+- **DECIMAL(10,2)** para litros → Solo 2 decimales, insuficiente para precisión
+- Faltan campos **TIMESTAMP** de Laravel (created_at, updated_at)
+- Campo `password` debería ser más largo para hashing moderno
+
+### 2. **❌ Campos Faltantes Críticos**
+
+#### **Faltantes en Usuario:**
+- `email` (requerido por Laravel Breeze)
+- `email_verified_at` (verificación de email)
+- `remember_token` (sesiones persistentes)
+- `telefono` (para WhatsApp integration)
+- `ci` (Cédula de Identidad - requerido en Bolivia)
+
+#### **Faltantes en SolicitudCombustible:**
+- `numero_solicitud` (identificador único para usuarios)
+- `urgente` (prioridad)
+- `justificacion_urgencia`
+
+#### **Faltantes en Presupuesto:**
+- `total_comprometido` (compromisos pendientes)
+- `activo` (estado del presupuesto)
+
+### 3. **❌ Relaciones Incorrectas**
+
+#### **Problema en ConsumoCombustible:**
+```plantuml
+ConsumoCombustible }o--|| DespachoCombustible
+```
+**❌ Incorrecto:** Un consumo puede existir sin despacho (carga externa)
+**✅ Correcto:** Relación opcional `}o--o|`
+
+#### **Problema en Usuario:**
+```plantuml
+Usuario }o--o{ Usuario : supervisa
+```
+**❌ Incorrecto:** Relación M:N sugiere múltiples supervisores
+**✅ Correcto:** Relación 1:N con `id_supervisor`
+
+### 4. **❌ Campos con Tipos Inadecuados**
+
+| Campo | Tipo Actual | Problema | Tipo Correcto |
+|-------|-------------|----------|---------------|
+| `vigente_hasta` | DATETIME | Solo fecha necesaria | DATE |
+| `estado_operativo` | VARCHAR(50) | Debe ser ENUM | ENUM('Operativo','Mantenimiento','Baja') |
+| `observaciones` | TEXT | Sin límite | TEXT(1000) |
+| `numero_vale` | VARCHAR(50) | Muy largo | VARCHAR(20) |
+
+## ✅ Diagrama Corregido y Optimizado
+
+```plantuml
+@startuml
+!theme plain
+
+' =================== ENTIDADES CORREGIDAS ===================
+
+entity Usuario {
+  *id_usuario : BIGINT UNSIGNED <<PK>>
+  --
+  username : VARCHAR(50) UNIQUE NOT NULL
+  email : VARCHAR(100) UNIQUE NOT NULL
+  email_verified_at : TIMESTAMP NULL
+  password : VARCHAR(255) NOT NULL
+  remember_token : VARCHAR(100) NULL
+  --
+  nombre : VARCHAR(100) NOT NULL
+  apellido_paterno : VARCHAR(50) NOT NULL
+  apellido_materno : VARCHAR(50) NULL
+  ci : VARCHAR(15) UNIQUE NOT NULL
+  telefono : VARCHAR(15) NULL
+  --
+  rol : ENUM('Admin_General','Admin_Secretaria','Supervisor','Conductor','Operator') NOT NULL
+  id_supervisor : BIGINT UNSIGNED <<FK>> NULL
+  id_unidad_organizacional : BIGINT UNSIGNED <<FK>> NOT NULL
+  --
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  fecha_ultimo_acceso : TIMESTAMP NULL
+  intentos_fallidos : TINYINT UNSIGNED DEFAULT 0
+  bloqueado_hasta : TIMESTAMP NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity SolicitudAprobacionUsuario {
+  *id_solicitud_aprobacion_usuario : BIGINT UNSIGNED <<PK>>
+  --
+  id_usuario : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_creador : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_supervisor_asignado : BIGINT UNSIGNED <<FK>> NULL
+  --
+  tipo_solicitud : ENUM('nuevo_usuario','cambio_rol','reactivacion','cambio_supervisor') NOT NULL DEFAULT 'nuevo_usuario'
+  estado_solicitud : ENUM('pendiente','aprobado','rechazado','en_revision') NOT NULL DEFAULT 'pendiente'
+  rol_solicitado : VARCHAR(50) NULL
+  --
+  justificacion : TEXT(500) NOT NULL
+  observaciones_aprobacion : TEXT(500) NULL
+  fecha_aprobacion : TIMESTAMP NULL
+  id_usuario_aprobador : BIGINT UNSIGNED <<FK>> NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity CodigoRegistro {
+  *id_codigo_registro : BIGINT UNSIGNED <<PK>>
+  --
+  codigo : VARCHAR(15) UNIQUE NOT NULL
+  id_usuario_generador : BIGINT UNSIGNED <<FK>> NOT NULL
+  vigente_hasta : DATE NOT NULL
+  usado : BOOLEAN NOT NULL DEFAULT FALSE
+  id_usuario_usado : BIGINT UNSIGNED <<FK>> NULL
+  fecha_uso : TIMESTAMP NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity SolicitudCombustible {
+  *id_solicitud : BIGINT UNSIGNED <<PK>>
+  --
+  numero_solicitud : VARCHAR(20) UNIQUE NOT NULL
+  id_usuario_solicitante : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_unidad_transporte : BIGINT UNSIGNED <<FK>> NOT NULL
+  --
+  fecha_solicitud : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  cantidad_litros_solicitados : DECIMAL(8,3) NOT NULL
+  motivo : TEXT(500) NOT NULL
+  urgente : BOOLEAN NOT NULL DEFAULT FALSE
+  justificacion_urgencia : TEXT(300) NULL
+  --
+  estado_solicitud : ENUM('Pendiente','En_Revision','Aprobada','Rechazada','Despachada','Cancelada') NOT NULL DEFAULT 'Pendiente'
+  id_usuario_aprobador : BIGINT UNSIGNED <<FK>> NULL
+  fecha_aprobacion : TIMESTAMP NULL
+  observaciones_aprobacion : TEXT(500) NULL
+  --
+  id_cat_programatica : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_fuente_org_fin : BIGINT UNSIGNED <<FK>> NOT NULL
+  saldo_actual_combustible : DECIMAL(12,2) NULL
+  --
+  km_actual : INT UNSIGNED NOT NULL
+  km_proyectado : INT UNSIGNED NOT NULL
+  rendimiento_estimado : DECIMAL(6,2) NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity DespachoCombustible {
+  *id_despacho : BIGINT UNSIGNED <<PK>>
+  --
+  id_solicitud : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_proveedor : BIGINT UNSIGNED <<FK>> NOT NULL
+  --
+  fecha_despacho : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  litros_despachados : DECIMAL(8,3) NOT NULL
+  precio_por_litro : DECIMAL(6,2) NOT NULL
+  costo_total : DECIMAL(12,2) NOT NULL
+  --
+  numero_vale : VARCHAR(20) UNIQUE NOT NULL
+  numero_factura : VARCHAR(30) NULL
+  id_usuario_despachador : BIGINT UNSIGNED <<FK>> NOT NULL
+  --
+  ubicacion_despacho : VARCHAR(100) NULL
+  observaciones : TEXT(500) NULL
+  validado : BOOLEAN NOT NULL DEFAULT FALSE
+  fecha_validacion : TIMESTAMP NULL
+  id_usuario_validador : BIGINT UNSIGNED <<FK>> NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity ConsumoCombustible {
+  *id_consumo : BIGINT UNSIGNED <<PK>>
+  --
+  id_unidad_transporte : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_despacho : BIGINT UNSIGNED <<FK>> NULL
+  id_usuario_conductor : BIGINT UNSIGNED <<FK>> NOT NULL
+  --
+  fecha_registro : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  kilometraje_inicial : INT UNSIGNED NOT NULL
+  kilometraje_fin : INT UNSIGNED NOT NULL
+  litros_cargados : DECIMAL(8,3) NOT NULL
+  --
+  tipo_carga : ENUM('despacho_oficial','carga_externa','emergencia') NOT NULL DEFAULT 'despacho_oficial'
+  lugar_carga : VARCHAR(100) NOT NULL
+  numero_ticket : VARCHAR(30) NULL
+  --
+  observaciones : TEXT(500) NULL
+  validado : BOOLEAN NOT NULL DEFAULT FALSE
+  fecha_validacion : TIMESTAMP NULL
+  id_usuario_validador : BIGINT UNSIGNED <<FK>> NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity UnidadTransporte {
+  *id_unidad_transporte : BIGINT UNSIGNED <<PK>>
+  --
+  placa : VARCHAR(15) UNIQUE NOT NULL
+  numero_chasis : VARCHAR(30) UNIQUE NULL
+  numero_motor : VARCHAR(30) NULL
+  --
+  marca : VARCHAR(50) NOT NULL
+  modelo : VARCHAR(50) NOT NULL
+  anio_fabricacion : YEAR NULL
+  color : VARCHAR(30) NOT NULL
+  --
+  id_tipo_vehiculo : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_tipo_combustible : BIGINT UNSIGNED <<FK>> NOT NULL
+  capacidad_tanque : DECIMAL(6,2) NOT NULL
+  --
+  kilometraje_actual : INT UNSIGNED NOT NULL DEFAULT 0
+  kilometraje_ultimo_mantenimiento : INT UNSIGNED DEFAULT 0
+  proximo_mantenimiento_km : INT UNSIGNED NULL
+  --
+  id_unidad_organizacional : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_conductor_asignado : BIGINT UNSIGNED <<FK>> NULL
+  estado_operativo : ENUM('Operativo','Mantenimiento','Taller','Baja','Reserva') NOT NULL DEFAULT 'Operativo'
+  --
+  seguro_vigente_hasta : DATE NULL
+  revision_tecnica_hasta : DATE NULL
+  fecha_ultimo_servicio : DATE NULL
+  --
+  observaciones : TEXT(500) NULL
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity TipoCombustible {
+  *id_tipo_combustible : BIGINT UNSIGNED <<PK>>
+  --
+  nombre : VARCHAR(50) UNIQUE NOT NULL
+  codigo_comercial : VARCHAR(10) UNIQUE NULL
+  descripcion : TEXT(200) NULL
+  octanaje : TINYINT UNSIGNED NULL
+  --
+  precio_referencial : DECIMAL(6,2) NULL
+  unidad_medida : VARCHAR(20) DEFAULT 'Litros'
+  --
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity TipoVehiculo {
+  *id_tipo_vehiculo : BIGINT UNSIGNED <<PK>>
+  --
+  nombre : VARCHAR(50) UNIQUE NOT NULL
+  categoria : ENUM('Liviano','Pesado','Motocicleta','Especializado') NOT NULL
+  descripcion : TEXT(200) NULL
+  --
+  consumo_promedio_ciudad : DECIMAL(4,2) NULL
+  consumo_promedio_carretera : DECIMAL(4,2) NULL
+  capacidad_carga_kg : INT UNSIGNED NULL
+  numero_pasajeros : TINYINT UNSIGNED NULL
+  --
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity UnidadOrganizacional {
+  *id_unidad_organizacional : BIGINT UNSIGNED <<PK>>
+  --
+  codigo_unidad : VARCHAR(20) UNIQUE NOT NULL
+  nombre_unidad : VARCHAR(100) UNIQUE NOT NULL
+  tipo_unidad : ENUM('Superior','Ejecutiva','Operativa') NOT NULL
+  --
+  id_unidad_padre : BIGINT UNSIGNED <<FK>> NULL
+  nivel_jerarquico : TINYINT UNSIGNED DEFAULT 1
+  --
+  responsable_unidad : VARCHAR(100) NULL
+  telefono : VARCHAR(15) NULL
+  direccion : VARCHAR(200) NULL
+  --
+  presupuesto_asignado : DECIMAL(14,2) DEFAULT 0
+  descripcion : TEXT(300) NULL
+  --
+  activa : BOOLEAN NOT NULL DEFAULT TRUE
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity Proveedor {
+  *id_proveedor : BIGINT UNSIGNED <<PK>>
+  --
+  nombre_proveedor : VARCHAR(100) NOT NULL
+  nombre_comercial : VARCHAR(100) NULL
+  nit : VARCHAR(20) UNIQUE NOT NULL
+  --
+  direccion : VARCHAR(200) NULL
+  telefono : VARCHAR(15) NULL
+  email : VARCHAR(100) NULL
+  --
+  id_tipo_servicio_proveedor : BIGINT UNSIGNED <<FK>> NOT NULL
+  contacto_principal : VARCHAR(100) NULL
+  --
+  calificacion : ENUM('A','B','C','D') DEFAULT 'C'
+  observaciones : TEXT(500) NULL
+  --
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity TipoServicioProveedor {
+  *id_tipo_servicio_proveedor : BIGINT UNSIGNED <<PK>>
+  --
+  codigo : VARCHAR(10) UNIQUE NOT NULL
+  nombre : VARCHAR(100) UNIQUE NOT NULL
+  descripcion : TEXT(200) NULL
+  --
+  requiere_autorizacion_especial : BOOLEAN DEFAULT FALSE
+  dias_credito_maximo : TINYINT UNSIGNED DEFAULT 0
+  --
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity Presupuesto {
+  *id_presupuesto : BIGINT UNSIGNED <<PK>>
+  --
+  id_cat_programatica : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_fuente_org_fin : BIGINT UNSIGNED <<FK>> NOT NULL
+  id_unidad_organizacional : BIGINT UNSIGNED <<FK>> NOT NULL
+  --
+  anio_fiscal : YEAR NOT NULL
+  trimestre : TINYINT UNSIGNED NULL
+  --
+  presupuesto_inicial : DECIMAL(14,2) NOT NULL
+  presupuesto_actual : DECIMAL(14,2) NOT NULL
+  total_gastado : DECIMAL(14,2) NOT NULL DEFAULT 0
+  total_comprometido : DECIMAL(14,2) NOT NULL DEFAULT 0
+  --
+  num_documento : VARCHAR(50) NOT NULL
+  numero_comprobante : VARCHAR(50) NULL
+  fecha_aprobacion : DATE NULL
+  --
+  porcentaje_preventivo : DECIMAL(5,2) DEFAULT 10.00
+  alerta_porcentaje : DECIMAL(5,2) DEFAULT 80.00
+  --
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  observaciones : TEXT(300) NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity CategoriaProgramatica {
+  *id_cat_programatica : BIGINT UNSIGNED <<PK>>
+  --
+  codigo : VARCHAR(30) UNIQUE NOT NULL
+  descripcion : VARCHAR(200) NOT NULL
+  tipo_categoria : ENUM('Programa','Proyecto','Actividad') NOT NULL
+  --
+  id_categoria_padre : BIGINT UNSIGNED <<FK>> NULL
+  nivel : TINYINT UNSIGNED DEFAULT 1
+  --
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  fecha_inicio : DATE NULL
+  fecha_fin : DATE NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity FuenteOrganismoFinanciero {
+  *id_fuente_org_fin : BIGINT UNSIGNED <<PK>>
+  --
+  codigo : VARCHAR(30) UNIQUE NOT NULL
+  descripcion : VARCHAR(200) NOT NULL
+  tipo_fuente : ENUM('Nacional','Departamental','Municipal','Internacional','Otros') NOT NULL
+  --
+  organismo_financiador : VARCHAR(100) NULL
+  requiere_contrapartida : BOOLEAN DEFAULT FALSE
+  porcentaje_contrapartida : DECIMAL(5,2) DEFAULT 0
+  --
+  activo : BOOLEAN NOT NULL DEFAULT TRUE
+  fecha_vigencia_inicio : DATE NULL
+  fecha_vigencia_fin : DATE NULL
+  --
+  created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+}
+
+entity RegistroAuditoria {
+  *id_registro_auditoria : BIGINT UNSIGNED <<PK>>
+  --
+  id_usuario : BIGINT UNSIGNED <<FK>> NOT NULL
+  fecha_hora : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  --
+  accion_realizada : VARCHAR(50) NOT NULL
+  tabla_afectada : VARCHAR(50) NOT NULL
+  registro_afectado : JSON NOT NULL
+  --
+  valores_anteriores : JSON NULL
+  valores_nuevos : JSON NULL
+  --
+  ip_origen : VARCHAR(45) NULL
+  user_agent : VARCHAR(200) NULL
+  sesion_id : VARCHAR(100) NULL
+  --
+  modulo_sistema : VARCHAR(50) NULL
+  nivel_criticidad : ENUM('BAJO','MEDIO','ALTO','CRÍTICO') DEFAULT 'MEDIO'
+}
+
+' =================== RELACIONES CORREGIDAS ===================
+
+' Usuario: Relaciones jerárquicas y organizacionales
+Usuario ||--o{ Usuario : supervisa
+Usuario }o--|| UnidadOrganizacional : pertenece
+Usuario ||--o{ SolicitudAprobacionUsuario : crea
+Usuario ||--o{ SolicitudAprobacionUsuario : solicita
+Usuario ||--o{ CodigoRegistro : genera
+Usuario ||--o{ CodigoRegistro : usa
+
+' Solicitudes de combustible
+Usuario ||--o{ SolicitudCombustible : solicita
+Usuario ||--o{ SolicitudCombustible : aprueba
+SolicitudCombustible }o--|| UnidadTransporte : para
+SolicitudCombustible }o--|| CategoriaProgramatica : categoria
+SolicitudCombustible }o--|| FuenteOrganismoFinanciero : fuente
+
+' Despachos de combustible
+SolicitudCombustible ||--o| DespachoCombustible : genera
+DespachoCombustible }o--|| Proveedor : proveedor
+DespachoCombustible }o--|| Usuario : despachador
+DespachoCombustible }o--|| Usuario : validador
+
+' Consumos de combustible
+UnidadTransporte ||--o{ ConsumoCombustible : consume
+DespachoCombustible ||--o{ ConsumoCombustible : origina
+Usuario ||--o{ ConsumoCombustible : conduce
+Usuario ||--o{ ConsumoCombustible : valida
+
+' Unidades de transporte
+UnidadTransporte }o--|| TipoVehiculo : tipo
+UnidadTransporte }o--|| TipoCombustible : combustible
+UnidadTransporte }o--|| UnidadOrganizacional : asignada
+UnidadTransporte }o--o| Usuario : conductor_asignado
+
+' Jerarquías organizacionales
+UnidadOrganizacional ||--o{ UnidadOrganizacional : unidad_padre
+
+' Proveedores y servicios
+Proveedor }o--|| TipoServicioProveedor : tipo_servicio
+
+' Presupuestos
+Presupuesto }o--|| UnidadOrganizacional : unidad
+Presupuesto }o--|| CategoriaProgramatica : categoria
+Presupuesto }o--|| FuenteOrganismoFinanciero : fuente
+
+' Jerarquías presupuestarias
+CategoriaProgramatica ||--o{ CategoriaProgramatica : categoria_padre
+
+' Auditoría
+Usuario ||--o{ RegistroAuditoria : realiza
+
+@enduml
+```
+
+## 🎯 Principales Mejoras Implementadas
+
+### 1. **🔧 Tipos de Datos Optimizados**
+- **BIGINT UNSIGNED** para todos los IDs principales (escalabilidad)
+- **DECIMAL(8,3)** para litros (3 decimales de precisión)
+- **DECIMAL(12,2)** para montos en bolivianos
+- **TIMESTAMP** con zona horaria para mejor manejo de fechas
+
+### 2. **📋 Campos Adicionales Críticos**
+
+#### **Usuario Completo:**
+- `email`, `email_verified_at`, `remember_token` (Laravel Breeze)
+- `ci`, `telefono` (datos bolivianos + WhatsApp)
+- `apellido_paterno`, `apellido_materno` (nombres completos)
+- Campos de seguridad: `intentos_fallidos`, `bloqueado_hasta`
+
+#### **Vehículos Mejorados:**
+- `numero_chasis`, `numero_motor` (identificación única)
+- `anio_fabricacion`, `proximo_mantenimiento_km`
+- Fechas de vencimientos: `seguro_vigente_hasta`, `revision_tecnica_hasta`
+- `id_conductor_asignado` (asignación específica)
+
+#### **Solicitudes Robustas:**
+- `numero_solicitud` (identificador para usuarios)
+- `urgente`, `justificacion_urgencia` (priorización)
+- `km_proyectado`, `rendimiento_estimado` (planificación)
+
+#### **Presupuesto Completo:**
+- `total_comprometido` (compromisos pendientes)
+- `alerta_porcentaje` (notificaciones automáticas)
+- `trimestre` (control granular)
+
+### 3. **🔗 Relaciones Corregidas**
+
+#### **Antes (Problemático):**
+```plantuml
+ConsumoCombustible }o--|| DespachoCombustible
+Usuario }o--o{ Usuario : supervisa
+```
+
+#### **Después (Correcto):**
+```plantuml
+DespachoCombustible ||--o{ ConsumoCombustible : origina
+Usuario ||--o{ Usuario : supervisa
+```
+
+### 4. **📊 Nuevos ENUM Específicos**
+
+#### **Estados Operativos Detallados:**
+```sql
+estado_operativo : ENUM('Operativo','Mantenimiento','Taller','Baja','Reserva')
+tipo_carga : ENUM('despacho_oficial','carga_externa','emergencia')
+nivel_criticidad : ENUM('BAJO','MEDIO','ALTO','CRÍTICO')
+```
+
+### 5. **🏗️ Jerarquías Implementadas**
+
+#### **Unidades Organizacionales:**
+- `id_unidad_padre` (estructura jerárquica)
+- `nivel_jerarquico` (control de niveles)
+
+#### **Categorías Programáticas:**
+- `id_categoria_padre` (jerarquía presupuestaria)
+- `tipo_categoria` (Programa/Proyecto/Actividad)
+
+## 💡 Recomendaciones de Implementación
+
+### 1. **📝 Scripts de Migración Laravel**
+```php
+// Migración ejemplo para Usuario
+Schema::create('usuarios', function (Blueprint $table) {
+    $table->bigInteger('id_usuario', true, true);
+    $table->string('username', 50)->unique();
+    $table->string('email', 100)->unique();
+    $table->timestamp('email_verified_at')->nullable();
+    $table->string('password');
+    $table->rememberToken();
+    // ... más campos
+    $table->timestamps();
+    
+    $table->foreign('id_supervisor')->references('id_usuario')->on('usuarios');
+    $table->foreign('id_unidad_organizacional')->references('id_unidad_organizacional')->on('unidades_organizacionales');
+});
+```
+
+### 2. **🔍 Índices Recomendados**
+```sql
+-- Índices para consultas frecuentes
+CREATE INDEX idx_solicitud_estado_fecha ON solicitudes_combustible (estado_solicitud, fecha_solicitud);
+CREATE INDEX idx_vehiculo_unidad_estado ON unidades_transporte (id_unidad_organizacional, estado_operativo);
+CREATE INDEX idx_consumo_vehiculo_fecha ON consumos_combustible (id_unidad_transporte, fecha_registro);
+CREATE INDEX idx_presupuesto_activo_anio ON presupuestos (activo, anio_fiscal);
+```
+
+### 3. **⚡ Validaciones Laravel**
+```php
+// Validaciones específicas para Bolivia
+'ci' => 'required|string|min:7|max:15|unique:usuarios',
+'telefono' => 'nullable|regex:/^(\+591)?[67]\d{7}$/',
+'placa' => 'required|regex:/^[A-Z]{3}-\d{4}$/',
+'nit' => 'required|string|min:7|max:20|unique:proveedores',
+```
+
+Este diagrama corregido proporciona una base sólida, escalable y específica para el sistema de gestión de combustible de la Gobernación de Cochabamba, con todas las mejores prácticas de diseño de base de datos implementadas.
