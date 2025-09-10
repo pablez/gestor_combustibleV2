@@ -42,23 +42,6 @@ class LoginForm extends Form
     }
 
     /**
-     * Handle form submit from the Livewire view.
-     */
-    public function login(): void
-    {
-        // Validate attributes defined with #[Validate]
-        $this->validate();
-
-        // Attempt authentication
-        $this->authenticate();
-
-        // Regenerate session to prevent fixation
-        session()->regenerate();
-
-        // Note: Redirect is handled in the Volt component, not here
-    }
-
-    /**
      * Ensure the authentication request is not rate limited.
      */
     protected function ensureIsNotRateLimited(): void

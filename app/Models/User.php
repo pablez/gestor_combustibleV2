@@ -6,12 +6,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -19,19 +18,9 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'username',
         'name',
-        'nombre',
-        'apellido_paterno',
-        'apellido_materno',
-        'ci',
-        'telefono',
         'email',
         'password',
-        'rol',
-        'id_supervisor',
-        'id_unidad_organizacional',
-        'activo',
     ];
 
     /**
@@ -53,26 +42,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'fecha_ultimo_acceso' => 'datetime',
-            'bloqueado_hasta' => 'datetime',
-            'activo' => 'boolean',
             'password' => 'hashed',
         ];
-    }
-
-    /**
-     * Supervisor relationship (optional)
-     */
-    public function supervisor()
-    {
-        return $this->belongsTo(self::class, 'id_supervisor');
-    }
-
-    /**
-     * Helper to get full name
-     */
-    public function getFullNameAttribute(): string
-    {
-        return trim(($this->nombre ?? $this->name) . ' ' . ($this->apellido_paterno ?? '') . ' ' . ($this->apellido_materno ?? ''));
     }
 }
