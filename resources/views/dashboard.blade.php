@@ -11,6 +11,29 @@
                 <div class="p-6 text-gray-900 dark:text-gray-100">
                     {{ __("You're logged in!") }}
                 </div>
+                <div class="p-6 border-t border-gray-100 dark:border-gray-700">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="p-4 bg-white dark:bg-gray-900 rounded shadow">
+                            <div class="text-sm text-gray-500">Usuarios</div>
+                            <div class="text-2xl font-bold">
+                                {{ \App\Models\User::count() }}
+                            </div>
+                            @can('usuarios.gestionar')
+                                <a href="{{ route('profile') }}" class="text-sm text-blue-600">Ver usuarios</a>
+                            @endcan
+                        </div>
+
+                        <div class="p-4 bg-white dark:bg-gray-900 rounded shadow">
+                            <div class="text-sm text-gray-500">Unidades organizacionales</div>
+                            <div class="text-2xl font-bold">
+                                {{ \App\Models\UnidadOrganizacional::count() }}
+                            </div>
+                            @if(auth()->check() && (auth()->user()->can('usuarios.ver') || auth()->user()->can('usuarios.gestionar')))
+                                <a href="{{ route('unidades.index') }}" class="text-sm text-blue-600">Ir a Unidades</a>
+                            @endif
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

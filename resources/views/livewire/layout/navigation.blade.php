@@ -27,6 +27,12 @@ $logout = function (Logout $logout) {
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    
+                    @if(auth()->check() && (auth()->user()->can('usuarios.ver') || auth()->user()->can('usuarios.gestionar')))
+                        <x-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
+                            {{ __('Unidades') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -78,6 +84,11 @@ $logout = function (Logout $logout) {
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            @if(auth()->check() && (auth()->user()->can('usuarios.ver') || auth()->user()->can('usuarios.gestionar')))
+                <x-responsive-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
+                    {{ __('Unidades') }}
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->
