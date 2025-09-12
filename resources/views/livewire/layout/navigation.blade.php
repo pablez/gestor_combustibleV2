@@ -10,7 +10,7 @@ $logout = function (Logout $logout) {
 
 ?>
 
-<nav x-data="{ open: false }" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+<nav x-data="{ open: false }" class="bg-white dark:bg-gray-900 shadow-sm">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -27,6 +27,11 @@ $logout = function (Logout $logout) {
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    @if(auth()->user() && (auth()->user()->hasPermissionTo('usuarios.gestionar') || auth()->user()->hasRole('Admin_General')))
+                        <x-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
+                            Unidades
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -73,32 +78,32 @@ $logout = function (Logout $logout) {
     </div>
 
     <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
-        <div class="pt-2 pb-3 space-y-1">
+    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-white dark:bg-gray-900">
+        <div class="pt-4 pb-3 px-4">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-medium">{{ strtoupper(substr(auth()->user()->name ?? auth()->user()->email,0,1)) }}</div>
+                <div>
+                    <div class="font-medium text-base text-gray-800 dark:text-gray-100">{{ auth()->user()->name }}</div>
+                    <div class="text-sm text-gray-500">{{ auth()->user()->email }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-2 pb-3 space-y-1 px-2">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-        </div>
 
-        <!-- Responsive Settings Options -->
-        <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
-            <div class="px-4">
-                <div class="font-medium text-base text-gray-800 dark:text-gray-200" x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name" x-on:profile-updated.window="name = $event.detail.name"></div>
-                <div class="font-medium text-sm text-gray-500">{{ auth()->user()->email }}</div>
-            </div>
-
-            <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile')" wire:navigate>
-                    {{ __('Profile') }}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo('usuarios.gestionar') || auth()->user()->hasRole('Admin_General')))
+                <x-responsive-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
+                    Unidades
                 </x-responsive-nav-link>
+            @endif
 
-                <!-- Authentication -->
-                <button wire:click="logout" class="w-full text-start">
-                    <x-responsive-nav-link>
-                        {{ __('Log Out') }}
-                    </x-responsive-nav-link>
-                </button>
-            </div>
+            <x-responsive-nav-link :href="route('profile')" wire:navigate>
+                {{ __('Profile') }}
+            </x-responsive-nav-link>
+
+            <button wire:click="logout" class="w-full text-start block px-4 py-2 text-sm text-red-600">Cerrar sesión</button>
         </div>
-    </div>
 </nav>
