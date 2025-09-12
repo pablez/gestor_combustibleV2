@@ -108,7 +108,7 @@ CREATE TABLE `usuarios` (
   `email` varchar(100) DEFAULT NULL,
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `telefono` varchar(20) DEFAULT NULL,
-  `rol` enum('Admin_General','Admin_Secretaria','Supervisor','Conductor','Operator') NOT NULL,
+  `rol` enum('Admin_General','Admin_Secretaria','Supervisor','Conductor') NOT NULL,
   `id_supervisor` int(11) DEFAULT NULL,
   `id_unidad_organizacional` int(11) NOT NULL,
   `fecha_creacion` timestamp NOT NULL DEFAULT current_timestamp(),

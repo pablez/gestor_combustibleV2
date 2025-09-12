@@ -18,7 +18,7 @@ entity Usuario {
   ci : VARCHAR(15) UNIQUE NOT NULL
   telefono : VARCHAR(15) NULL
   --
-  rol : ENUM('Admin_General','Admin_Secretaria','Supervisor','Conductor','Operator') NOT NULL
+  rol : ENUM('Admin_General','Admin_Secretaria','Supervisor','Conductor') NOT NULL
   id_supervisor : BIGINT UNSIGNED <<FK>> NULL
   id_unidad_organizacional : BIGINT UNSIGNED <<FK>> NOT NULL
   --

@@ -190,7 +190,7 @@ CREATE TABLE `usuarios` (
   `apellido_materno` VARCHAR(50) NULL,
   `ci` VARCHAR(15) NOT NULL COMMENT 'Cédula de Identidad',
   `telefono` VARCHAR(15) NULL COMMENT 'Formato: +59177777777',
-  `rol` ENUM('Admin_General','Admin_Secretaria','Supervisor','Conductor','Operator') NOT NULL,
+  `rol` ENUM('Admin_General','Admin_Secretaria','Supervisor','Conductor') NOT NULL,
   `id_supervisor` BIGINT UNSIGNED NULL,
   `id_unidad_organizacional` BIGINT UNSIGNED NOT NULL,
   `activo` BOOLEAN NOT NULL DEFAULT TRUE,
