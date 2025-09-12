@@ -1,80 +1,44 @@
 <div>
-    <h2 class="text-xl font-bold mb-4">Crear Unidad Organizacional</h2>
+    @if($show)
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-xl p-6">
+                <h3 class="text-lg font-semibold mb-4">Crear unidad</h3>
+                <form wire:submit.prevent="save">
+                    <div class="mb-3">
+                        <label class="block text-sm text-gray-600">Código</label>
+                        <div class="flex gap-2 items-center">
+                            <input wire:model="codigo_unidad" class="flex-1 border rounded px-3 py-2" />
+                            <button type="button" wire:click="regenerateCodigo" title="Generar" class="inline-flex items-center justify-center px-2 py-1 border rounded text-sm bg-gray-100 hover:bg-gray-200">
+                                ⟳
+                            </button>
+                        </div>
+                        @error('codigo_unidad') <div class="text-red-600 text-sm">{{ $message }}</div> @enderror
+                    </div>
 
-    <form wire:submit.prevent="save" class="space-y-3">
-        <div>
-            <label class="block">Código</label>
-            <input wire:model.defer="codigo_unidad" class="border rounded px-2 py-1 w-full" />
-            @error('codigo_unidad') <span class="text-red-600">{{ $message }}</span> @enderror
-        </div>
+                    <div class="mb-3">
+                        <label class="block text-sm text-gray-600">Nombre</label>
+                        <input wire:model="nombre_unidad" class="w-full border rounded px-3 py-2" />
+                        @error('nombre_unidad') <div class="text-red-600 text-sm">{{ $message }}</div> @enderror
+                    </div>
 
-        <div>
-            <label class="block">Nombre</label>
-            <input wire:model.defer="nombre_unidad" class="border rounded px-2 py-1 w-full" />
-            @error('nombre_unidad') <span class="text-red-600">{{ $message }}</span> @enderror
-        </div>
+                    <!-- Siglas ahora se generan en el campo código -->
 
-        <div class="grid grid-cols-2 gap-2">
-            <div>
-                <label class="block">Tipo</label>
-                <select wire:model.defer="tipo_unidad" class="border rounded px-2 py-1 w-full">
-                    <option value="Superior">Superior</option>
-                    <option value="Ejecutiva">Ejecutiva</option>
-                    <option value="Operativa">Operativa</option>
-                </select>
-                @error('tipo_unidad') <span class="text-red-600">{{ $message }}</span> @enderror
+                    <div class="mb-3">
+                        <label class="block text-sm text-gray-600">Tipo</label>
+                        <select wire:model="tipo_unidad" class="w-full border rounded px-3 py-2">
+                            <option value="Operativa">Operativa</option>
+                            <option value="Ejecutiva">Ejecutiva</option>
+                            <option value="Superior">Superior</option>
+                        </select>
+                        @error('tipo_unidad') <div class="text-red-600 text-sm">{{ $message }}</div> @enderror
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button type="button" wire:click="close" class="px-4 py-2 border rounded">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded">Guardar</button>
+                    </div>
+                </form>
             </div>
-
-            <div>
-                <label class="block">Nivel jerárquico</label>
-                <input type="number" wire:model.defer="nivel_jerarquico" class="border rounded px-2 py-1 w-full" />
-            </div>
         </div>
-
-        <div>
-            <label class="block">Unidad padre (opcional)</label>
-            <select wire:model.defer="id_unidad_padre" class="border rounded px-2 py-1 w-full">
-                <option value="">-- Ninguna --</option>
-                @foreach($parents as $p)
-                    <option value="{{ $p->id_unidad_organizacional }}">{{ $p->nombre_unidad }}</option>
-                @endforeach
-            </select>
-        </div>
-
-        <div>
-            <label class="block">Responsable</label>
-            <input wire:model.defer="responsable_unidad" class="border rounded px-2 py-1 w-full" />
-        </div>
-
-        <div>
-            <label class="block">Teléfono</label>
-            <input wire:model.defer="telefono" class="border rounded px-2 py-1 w-full" />
-        </div>
-
-        <div>
-            <label class="block">Dirección</label>
-            <input wire:model.defer="direccion" class="border rounded px-2 py-1 w-full" />
-        </div>
-
-        <div>
-            <label class="block">Presupuesto asignado</label>
-            <input type="number" step="0.01" wire:model.defer="presupuesto_asignado" class="border rounded px-2 py-1 w-full" />
-        </div>
-
-        <div>
-            <label class="block">Descripción</label>
-            <textarea wire:model.defer="descripcion" class="border rounded px-2 py-1 w-full"></textarea>
-        </div>
-
-        <div>
-            <label class="inline-flex items-center">
-                <input type="checkbox" wire:model.defer="activa" class="mr-2" /> Activa
-            </label>
-        </div>
-
-        <div>
-            <button class="bg-blue-600 text-white px-3 py-1 rounded">Guardar</button>
-            <a href="{{ route('unidades.index') }}" class="ml-2 text-gray-600">Cancelar</a>
-        </div>
-    </form>
+    @endif
 </div>
