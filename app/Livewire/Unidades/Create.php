@@ -12,7 +12,7 @@ class Create extends Component
     public $show = false;
     public $codigo_unidad;
     public $nombre_unidad;
-    public $tipo_unidad = 'Operativa';
+    public $tipo_unidad = 'Ejecutiva';
     public $nivel_jerarquico = 1;
     public $responsable_unidad;
     public $telefono;
@@ -29,9 +29,8 @@ class Create extends Component
 
     public function mount()
     {
-        if (! Auth::check() || ! Auth::user()->hasPermissionTo('usuarios.gestionar')) {
-            abort(403);
-        }
+        // Avoid aborting at mount time to allow page render even if user lacks permission.
+        // Authorization will be enforced when trying to open/save.
     }
 
     protected $listeners = [
@@ -136,6 +135,11 @@ class Create extends Component
 
     public function save()
     {
+        if (! Auth::check() || ! \Gate::allows('create', \App\Models\UnidadOrganizacional::class)) {
+            session()->flash('error', 'No tiene permisos para crear unidades organizacionales.');
+            return;
+        }
+
         $this->validate();
     // Ensure codigo_unidad exists before saving (fallback generation)
     $codigoToSave = $this->codigo_unidad ?: $this->generateSiglas($this->nombre_unidad);

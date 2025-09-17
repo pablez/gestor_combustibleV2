@@ -5,6 +5,7 @@ namespace App\Livewire\Unidades;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\UnidadOrganizacional;
 
 class Edit extends Component
 {
@@ -24,14 +25,14 @@ class Edit extends Component
     {
         return [
             'codigo_unidad' => 'required|string|max:20|unique:unidades_organizacionales,codigo_unidad,' . $this->id_unidad . ',id_unidad_organizacional',
-            'nombre_unidad' => 'required|string|max:100',
+            'nombre_unidad' => 'required|string|max:100|unique:unidades_organizacionales,nombre_unidad,' . $this->id_unidad . ',id_unidad_organizacional',
             'tipo_unidad' => 'required|in:Superior,Ejecutiva,Operativa',
-            'nivel_jerarquico' => 'nullable|string|max:50',
+            'nivel_jerarquico' => 'nullable|integer|min:1',
             'responsable_unidad' => 'nullable|string|max:100',
-            'telefono' => 'nullable|string|max:20',
-            'direccion' => 'nullable|string|max:255',
+            'telefono' => 'nullable|string|max:15',
+            'direccion' => 'nullable|string|max:200',
             'presupuesto_asignado' => 'nullable|numeric|min:0',
-            'descripcion' => 'nullable|string|max:500',
+            'descripcion' => 'nullable|string',
         ];
     }
 
@@ -106,9 +107,9 @@ class Edit extends Component
 
     public function mount($id = null)
     {
-        if (! Auth::check() || ! Auth::user()->hasPermissionTo('usuarios.gestionar')) {
-            abort(403);
-        }
+        // Avoid aborting during mount to prevent full-page 403 when the component
+        // is included on pages where the current user may not have edit rights.
+        // Permission checks are performed when attempting to open or save.
         if ($id) {
             $this->fillFromId($id);
         }
@@ -116,6 +117,17 @@ class Edit extends Component
 
     public function open($id)
     {
+        // Authorization: only allow opening the edit modal to users with the permission
+        $unidad = UnidadOrganizacional::find($id);
+        if (! $unidad) {
+            session()->flash('error', 'Unidad no encontrada.');
+            return;
+        }
+
+        if (! Auth::check() || ! \Gate::allows('update', $unidad)) {
+            session()->flash('error', 'No tiene permisos para editar unidades organizacionales.');
+            return;
+        }
         $this->resetValidation();
         $this->fillFromId($id);
         $this->show = true;
@@ -128,7 +140,7 @@ class Edit extends Component
 
     protected function fillFromId($id)
     {
-        $unidad = DB::table('unidades_organizacionales')->where('id_unidad_organizacional', $id)->first();
+        $unidad = UnidadOrganizacional::find($id);
         if (! $unidad) {
             session()->flash('error', 'Unidad no encontrada.');
             return;
@@ -148,12 +160,42 @@ class Edit extends Component
 
     public function save()
     {
-        $this->validate();
-        // Si el código está vacío, generarlo a partir del nombre
-        $codigoToSave = $this->codigo_unidad ?: $this->generateSiglas($this->nombre_unidad);
+        \Log::info('Edit::save() iniciado', ['user_id' => Auth::id(), 'id_unidad' => $this->id_unidad]);
+        
+        if (! Auth::check() ) {
+            \Log::warning('Sin sesión al intentar editar', ['user_id' => Auth::id()]);
+            session()->flash('error', 'No tiene permisos para guardar cambios en unidades organizacionales.');
+            return;
+        }
 
-        DB::table('unidades_organizacionales')->where('id_unidad_organizacional', $this->id_unidad)
-            ->update([
+        $unidad = UnidadOrganizacional::find($this->id_unidad);
+        if (! $unidad) {
+            session()->flash('error', 'Unidad no encontrada.');
+            return;
+        }
+
+        if (! \Gate::allows('update', $unidad)) {
+            \Log::warning('Sin permisos para editar', ['user_id' => Auth::id()]);
+            session()->flash('error', 'No tiene permisos para guardar cambios en unidades organizacionales.');
+            return;
+        }
+
+        \Log::info('Iniciando validación');
+        $this->validate();
+        \Log::info('Validación exitosa');
+        
+        try {
+            $unidad = UnidadOrganizacional::find($this->id_unidad);
+            if (! $unidad) {
+                \Log::error('Unidad no encontrada', ['id' => $this->id_unidad]);
+                session()->flash('error', 'Unidad no encontrada.');
+                return;
+            }
+
+            // Si el código está vacío, generarlo a partir del nombre
+            $codigoToSave = $this->codigo_unidad ?: $this->generateSiglas($this->nombre_unidad);
+
+            $data = [
                 'codigo_unidad' => $codigoToSave,
                 'nombre_unidad' => $this->nombre_unidad,
                 'tipo_unidad' => $this->tipo_unidad,
@@ -163,12 +205,21 @@ class Edit extends Component
                 'direccion' => $this->direccion,
                 'presupuesto_asignado' => $this->presupuesto_asignado,
                 'descripcion' => $this->descripcion,
-                'updated_at' => now(),
-            ]);
+            ];
+            
+            \Log::info('Datos para actualizar', $data);
+            
+            $unidad->update($data);
 
-    session()->flash('success', 'Unidad actualizada.');
-    $this->show = false;
-    $this->dispatch('unidadUpdated');
+            \Log::info('Unidad actualizada exitosamente');
+            session()->flash('success', 'Unidad actualizada correctamente.');
+            $this->show = false;
+            $this->dispatch('unidadUpdated');
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al actualizar unidad', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            session()->flash('error', 'Error al actualizar la unidad: ' . $e->getMessage());
+        }
     }
 
     public function render()

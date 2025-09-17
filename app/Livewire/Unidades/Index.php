@@ -30,15 +30,15 @@ class Index extends Component
 
     public function mount()
     {
-        // Authorization: only users with 'usuarios.gestionar' or Admin_General can view index
-        if (! Auth::check() || (! Auth::user()->hasRole('Admin_General') && ! Auth::user()->hasPermissionTo('usuarios.gestionar'))) {
+        // Authorization: only users with 'unidades.ver' or Admin_General can view index
+        if (! Auth::check() || (! Auth::user()->hasRole('Admin_General') && ! Auth::user()->hasPermissionTo('unidades.ver'))) {
             abort(403);
         }
     }
 
     public function delete($id)
     {
-        if (! Auth::user()->hasPermissionTo('usuarios.gestionar')) {
+        if (! Auth::user()->hasPermissionTo('unidades.eliminar')) {
             session()->flash('error', 'No tiene permiso para eliminar unidades.');
             return;
         }

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfilePhotoController;
 
 Route::view('/', 'welcome');
 
@@ -20,6 +21,7 @@ use App\Livewire\Unidades\Edit as UnidadesEdit;
 use App\Livewire\Unidades\Show as UnidadesShow;
 
 Route::middleware(['auth'])->group(function () {
+    Route::post('/profile/photo', [ProfilePhotoController::class, 'upload'])->name('profile.photo.upload');
     Route::get('unidades', UnidadesIndex::class)->name('unidades.index');
     Route::get('unidades/create', UnidadesCreate::class)->name('unidades.create');
     Route::get('unidades/{id}/edit', UnidadesEdit::class)->name('unidades.edit');

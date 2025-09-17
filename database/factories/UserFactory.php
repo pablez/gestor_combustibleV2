@@ -24,11 +24,21 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'username' => fake()->unique()->userName(),
             'name' => fake()->name(),
+            'nombre' => fake()->firstName(),
+            'apellido_paterno' => fake()->lastName(),
+            'apellido_materno' => fake()->lastName(),
+            'ci' => fake()->unique()->numerify('########'),
+            'telefono' => fake()->numerify('7########'),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            // Roles are managed by Spatie; assign via assignRole in seeders/tests
+            'id_supervisor' => null,
+            'id_unidad_organizacional' => null,
+            'activo' => true,
         ];
     }
 

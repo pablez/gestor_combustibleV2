@@ -17,5 +17,8 @@ class DatabaseSeeder extends Seeder
 
         // Seed roles and permissions and create initial admin
         $this->call(RolesPermissionsSeeder::class);
+        // Ensure organizational units exist before creating users that reference them
+        $this->call(UnidadOrganizacionalSeeder::class);
+        $this->call(AdminUserSeeder::class);
     }
 }

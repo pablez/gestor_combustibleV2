@@ -56,7 +56,7 @@ $register = function () {
         'name' => ($validated['nombre'] ?? $validated['username']) . ' ' . ($validated['apellido_paterno'] ?? ''),
         'email' => $validated['email'],
         'password' => $validated['password'],
-        'rol' => $validated['rol'] ?? 'Conductor',
+        // 'rol' field is managed via Spatie role assignment, not stored on users table
         'id_unidad_organizacional' => $validated['id_unidad_organizacional'] ?? null,
         'activo' => true,
     ];
