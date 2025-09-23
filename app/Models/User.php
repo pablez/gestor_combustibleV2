@@ -21,7 +21,6 @@ class User extends Authenticatable
     protected $fillable = [
         'username',
         'name',
-        'nombre',
         'apellido_paterno',
         'apellido_materno',
         'ci',
@@ -35,6 +34,18 @@ class User extends Authenticatable
     ];
 
     /**
+     * Appended accessors when serializing the model.
+     *
+     * @var array<int,string>
+     */
+    protected $appends = [
+        'full_name',
+        'primary_role',
+        'profile_photo_url',
+        'initials',
+    ];
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
@@ -45,20 +56,17 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string,string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'fecha_ultimo_acceso' => 'datetime',
-            'bloqueado_hasta' => 'datetime',
-            'activo' => 'boolean',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'fecha_ultimo_acceso' => 'datetime',
+        'bloqueado_hasta' => 'datetime',
+        'activo' => 'boolean',
+        'password' => 'hashed',
+    ];
 
     /**
      * Supervisor relationship (optional)
@@ -89,7 +97,29 @@ class User extends Authenticatable
      */
     public function getFullNameAttribute(): string
     {
-        return trim(($this->nombre ?? $this->name) . ' ' . ($this->apellido_paterno ?? '') . ' ' . ($this->apellido_materno ?? ''));
+        // Use `name` as canonical display name and append surnames when present
+        return trim(($this->name ?? '') . ' ' . ($this->apellido_paterno ?? '') . ' ' . ($this->apellido_materno ?? ''));
+    }
+
+    /**
+     * Iniciales del nombre completo (2 letras como máximo).
+     */
+    public function getInitialsAttribute(): string
+    {
+        $source = trim($this->full_name ?: ($this->name ?? ''));
+        if ($source === '') {
+            return '';
+        }
+
+        $parts = preg_split('/\s+/u', $source);
+        $initials = '';
+        foreach ($parts as $p) {
+            if ($p === '') continue;
+            $initials .= mb_substr($p, 0, 1);
+            if (mb_strlen($initials) >= 2) break;
+        }
+
+        return mb_strtoupper($initials ?: mb_substr($source, 0, 1));
     }
 
     /**

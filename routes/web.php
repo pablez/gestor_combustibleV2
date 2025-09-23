@@ -19,11 +19,23 @@ use App\Livewire\Unidades\Index as UnidadesIndex;
 use App\Livewire\Unidades\Create as UnidadesCreate;
 use App\Livewire\Unidades\Edit as UnidadesEdit;
 use App\Livewire\Unidades\Show as UnidadesShow;
+use App\Livewire\Users\UserIndex;
+use App\Livewire\Users\UserCreate;
+use App\Livewire\Users\UserEdit;
+use App\Livewire\Users\UserShow;
 
 Route::middleware(['auth'])->group(function () {
     Route::post('/profile/photo', [ProfilePhotoController::class, 'upload'])->name('profile.photo.upload');
+    
+    // Unidades routes
     Route::get('unidades', UnidadesIndex::class)->name('unidades.index');
     Route::get('unidades/create', UnidadesCreate::class)->name('unidades.create');
     Route::get('unidades/{id}/edit', UnidadesEdit::class)->name('unidades.edit');
     Route::get('unidades/{id}', UnidadesShow::class)->name('unidades.show');
+    
+    // Users routes
+    Route::get('users', UserIndex::class)->name('users.index');
+    Route::get('users/create', UserCreate::class)->name('users.create');
+    Route::get('users/{id}/edit', UserEdit::class)->name('users.edit');
+    Route::get('users/{id}', UserShow::class)->name('users.show');
 });

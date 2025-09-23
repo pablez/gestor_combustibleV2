@@ -20,5 +20,7 @@ class DatabaseSeeder extends Seeder
         // Ensure organizational units exist before creating users that reference them
         $this->call(UnidadOrganizacionalSeeder::class);
         $this->call(AdminUserSeeder::class);
+        // Create test users with different roles
+        $this->call(UsersTestSeeder::class);
     }
 }

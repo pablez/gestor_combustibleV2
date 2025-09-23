@@ -23,10 +23,35 @@ class UnidadOrganizacionalSeeder extends Seeder
             'DESPACHO DE LA GOBERNACIÓN',
         ];
 
-    // Remove existing entries with these exact names to allow reseeding/updating
-    DB::table('unidades_organizacionales')->whereIn('nombre_unidad', $names)->delete();
+        // Remove existing entries with these exact names to allow reseeding/updating
+        DB::table('unidades_organizacionales')->whereIn('nombre_unidad', $names)->delete();
 
-    foreach ($names as $i => $fullname) {
+        // Ensure DESPACHO DE LA GOBERNACIÓN exists with id 10.
+        // Remove any conflicting id 10 first to avoid duplicate key errors.
+        DB::table('unidades_organizacionales')->where('id_unidad_organizacional', 10)->delete();
+        $despachoName = 'DESPACHO DE LA GOBERNACIÓN';
+        DB::table('unidades_organizacionales')->insert([
+            'id_unidad_organizacional' => 10,
+            'codigo_unidad' => 'DG',
+            'nombre_unidad' => $despachoName,
+            'tipo_unidad' => 'Superior',
+            'id_unidad_padre' => null,
+            'nivel_jerarquico' => 1,
+            'responsable_unidad' => null,
+            'telefono' => null,
+            'direccion' => null,
+            'presupuesto_asignado' => 0,
+            'descripcion' => null,
+            'activa' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        foreach ($names as $i => $fullname) {
+            // Skip DESPACHO since we've already inserted it with id 10
+            if (mb_stripos($fullname, $despachoName) !== false) {
+                continue;
+            }
             $siglas = $this->generateSiglas($fullname);
 
             // Default: 'Ejecutiva' (ejecutivo menor) with nivel_jerarquico = 2

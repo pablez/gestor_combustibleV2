@@ -32,6 +32,11 @@ $logout = function (Logout $logout) {
                             Unidades
                         </x-nav-link>
                     @endif
+                    @if(auth()->user())
+                        <x-nav-link :href="route('users.index')" :active="request()->routeIs('users*')" wire:navigate>
+                            Usuarios
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -135,6 +140,12 @@ $logout = function (Logout $logout) {
             @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
                 <x-responsive-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
                     Unidades
+                </x-responsive-nav-link>
+            @endif
+
+            @if(auth()->user() && auth()->user()->hasRole('Admin_General'))
+                <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users*')" wire:navigate>
+                    Usuarios
                 </x-responsive-nav-link>
             @endif
 

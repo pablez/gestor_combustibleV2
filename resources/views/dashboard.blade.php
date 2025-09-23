@@ -1,17 +1,54 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Dashboard') }}
-        </h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+                Dashboard - Sistema de Gestión de Combustible
+            </h2>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Bienvenido, {{ auth()->user()->full_name }}
+                <span class="ml-2 px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-xs">
+                    {{ auth()->user()->primary_role ? str_replace('_', ' ', auth()->user()->primary_role) : 'Sin rol' }}
+                </span>
+            </div>
+        </div>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    {{ __("You're logged in!") }}
-                </div>
+            
+            {{-- Mensaje de bienvenida contextual --}}
+            <div class="mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                <h3 class="text-xl font-semibold mb-2">
+                    @if(auth()->user()->hasRole('Admin_General'))
+                        Panel de Administración General
+                    @elseif(auth()->user()->hasRole('Admin_Secretaria'))
+                        Panel de Administración - {{ auth()->user()->unidad?->nombre_unidad ?? 'Sin unidad asignada' }}
+                    @elseif(auth()->user()->hasRole('Supervisor'))
+                        Panel de Supervisión - {{ auth()->user()->unidad?->nombre_unidad ?? 'Sin unidad asignada' }}
+                    @elseif(auth()->user()->hasRole('Conductor'))
+                        Panel de Conductor
+                    @else
+                        Bienvenido al Sistema
+                    @endif
+                </h3>
+                <p class="text-indigo-100">
+                    @if(auth()->user()->hasRole('Admin_General'))
+                        Tienes acceso completo a todo el sistema. Gestiona usuarios, unidades y todas las operaciones.
+                    @elseif(auth()->user()->hasRole('Admin_Secretaria'))
+                        Gestiona usuarios y operaciones de tu unidad organizacional.
+                    @elseif(auth()->user()->hasRole('Supervisor'))
+                        Supervisa y gestiona a los conductores bajo tu cargo.
+                    @elseif(auth()->user()->hasRole('Conductor'))
+                        Accede a tus solicitudes y despachos de combustible.
+                    @else
+                        Explora las funcionalidades disponibles según tus permisos.
+                    @endif
+                </p>
             </div>
+
+            {{-- KPIs de Usuarios --}}
+            @livewire('dashboard-kpis')
+
         </div>
     </div>
 </x-app-layout>

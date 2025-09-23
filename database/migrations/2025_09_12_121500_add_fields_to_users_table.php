@@ -15,11 +15,9 @@ return new class extends Migration
             if (!Schema::hasColumn('users', 'username')) {
                 $table->string('username', 50)->unique()->after('id');
             }
-            if (!Schema::hasColumn('users', 'nombre')) {
-                $table->string('nombre', 100)->after('email');
-            }
+            // 'name' already exists on users table; do not add redundant 'nombre' column.
             if (!Schema::hasColumn('users', 'apellido_paterno')) {
-                $table->string('apellido_paterno', 50)->nullable()->after('nombre');
+                $table->string('apellido_paterno', 50)->nullable()->after('name');
             }
             if (!Schema::hasColumn('users', 'apellido_materno')) {
                 $table->string('apellido_materno', 50)->nullable()->after('apellido_paterno');
@@ -79,7 +77,7 @@ return new class extends Migration
             if (Schema::hasColumn('users', 'ci')) $table->dropColumn('ci');
             if (Schema::hasColumn('users', 'apellido_materno')) $table->dropColumn('apellido_materno');
             if (Schema::hasColumn('users', 'apellido_paterno')) $table->dropColumn('apellido_paterno');
-            if (Schema::hasColumn('users', 'nombre')) $table->dropColumn('nombre');
+            // Column 'nombre' intentionally not managed here (to avoid duplication with 'name')
             if (Schema::hasColumn('users', 'username')) $table->dropColumn('username');
         });
     }
