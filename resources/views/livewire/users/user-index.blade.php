@@ -6,6 +6,16 @@
                 {{-- Header --}}
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
                     <div>
+                        <a href="{{ url()->previous() }}" 
+                           onclick="event.preventDefault(); history.back();"
+                           class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition mb-3">
+                            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9 5L4 10l5 5" />
+                                <path d="M4 10h12" />
+                            </svg>
+                            <span class="text-sm font-medium">Volver</span>
+                        </a>
+
                         <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">Gestión de Usuarios</h2>
                         <p class="text-gray-600 dark:text-gray-400 mt-1">Administra los usuarios del sistema</p>
                     </div>

@@ -49,7 +49,7 @@
                     
                     {{-- Actions --}}
                     <div class="flex flex-wrap gap-2">
-                        @can('users.edit')
+                        @can('usuarios.editar')
                             <a href="{{ route('users.edit', $user->id) }}" 
                                wire:navigate
                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -64,8 +64,9 @@
                             <button wire:click="toggleActive" 
                                     class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                 @if($user->activo)
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 12M6 6l12 12" />
+                                    <svg class="w-4 h-4 mr-2 text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="9" />
+                                        <line x1="5.22" y1="5.22" x2="18.78" y2="18.78" />
                                     </svg>
                                     Desactivar
                                 @else

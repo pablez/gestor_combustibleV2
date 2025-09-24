@@ -22,5 +22,9 @@ class DatabaseSeeder extends Seeder
         $this->call(AdminUserSeeder::class);
         // Create test users with different roles
         $this->call(UsersTestSeeder::class);
+        $this->call(UnidadTransporteSeeder::class);
+        $this->call(FuenteOrganismoFinancieroSeeder::class);
+        $this->call(CategoriaProgramaticaSeeder::class);
+        $this->call(SolicitudCombustibleSeeder::class);
     }
 }

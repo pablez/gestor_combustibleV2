@@ -33,8 +33,8 @@ $logout = function (Logout $logout) {
                         </x-nav-link>
                     @endif
                     @if(auth()->user())
-                        <x-nav-link :href="route('users.index')" :active="request()->routeIs('users*')" wire:navigate>
-                            Usuarios
+                        <x-nav-link :href="route('users.dashboard')" :active="request()->routeIs('users.dashboard')" wire:navigate>
+                            Gestor de Usuarios
                         </x-nav-link>
                     @endif
                 </div>
@@ -143,9 +143,9 @@ $logout = function (Logout $logout) {
                 </x-responsive-nav-link>
             @endif
 
-            @if(auth()->user() && auth()->user()->hasRole('Admin_General'))
-                <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users*')" wire:navigate>
-                    Usuarios
+            @if(auth()->user())
+                <x-responsive-nav-link :href="route('users.dashboard')" :active="request()->routeIs('users.dashboard')" wire:navigate>
+                    Gestor de Usuarios
                 </x-responsive-nav-link>
             @endif
 

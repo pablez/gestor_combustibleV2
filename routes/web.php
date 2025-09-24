@@ -34,6 +34,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('unidades/{id}', UnidadesShow::class)->name('unidades.show');
     
     // Users routes
+    // Dashboard/gestor de usuarios (Livewire)
+    Route::get('users/dashboard', \App\Livewire\DashboardUser::class)->name('users.dashboard');
     Route::get('users', UserIndex::class)->name('users.index');
     Route::get('users/create', UserCreate::class)->name('users.create');
     Route::get('users/{id}/edit', UserEdit::class)->name('users.edit');

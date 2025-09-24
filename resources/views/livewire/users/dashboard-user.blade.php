@@ -1,4 +1,4 @@
-<x-app-layout>
+<div class="py-8">
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
@@ -12,12 +12,8 @@
             </div>
         </div>
     </x-slot>
-
-    <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            
-            {{-- Mensaje de bienvenida contextual --}}
-            <div class="mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
                 <h3 class="text-xl font-semibold mb-2">
                     @if(auth()->user()->hasRole('Admin_General'))
                         Panel de Administración General
@@ -46,18 +42,8 @@
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <main class="lg:col-span-2">
-                    {{-- KPIs de Usuarios (contenido principal) --}}
-                    @livewire('kpis.users-kpis')
-                </main>
-
-                <aside class="lg:col-span-1">
-                    {{-- KPIs de Unidades (costado) --}}
-                    @livewire('kpis.unidades-kpis')
-                </aside>
-            </div>
-
-        </div>
+        @livewire('Dashboard-Kpis')
     </div>
-</x-app-layout>
+</div>
+
+
