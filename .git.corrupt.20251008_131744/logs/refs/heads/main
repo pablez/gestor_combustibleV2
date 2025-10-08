@@ -1,0 +1,11 @@
+0000000000000000000000000000000000000000 4e550fa2dfd2dd79dfe0fbef87c106e59c3367c2 PabloMoya <pablogr2928@gmail.com> 1757351791 -0400	commit (initial): first commit
+4e550fa2dfd2dd79dfe0fbef87c106e59c3367c2 4e550fa2dfd2dd79dfe0fbef87c106e59c3367c2 PabloMoya <pablogr2928@gmail.com> 1757351797 -0400	Branch: renamed refs/heads/master to refs/heads/main
+4e550fa2dfd2dd79dfe0fbef87c106e59c3367c2 9e5ed3a87f43d798d2c4d34618006faa33e0bb7c PabloMoya <pablogr2928@gmail.com> 1757439167 -0400	commit: feat: Add user registration fields and roles management
+9e5ed3a87f43d798d2c4d34618006faa33e0bb7c 90700e3a02eaab1b8c4ed7311e3b0a6f242a4cc6 PabloMoya <pablogr2928@gmail.com> 1757518178 -0400	commit: creacion de transportes
+90700e3a02eaab1b8c4ed7311e3b0a6f242a4cc6 d526fd6e1058ce65bf03714117ab8f6a80ad27b1 PabloMoya <pablogr2928@gmail.com> 1757518736 -0400	revert: Revert "feat: Add user registration fields and roles management"
+d526fd6e1058ce65bf03714117ab8f6a80ad27b1 9e5ed3a87f43d798d2c4d34618006faa33e0bb7c PabloMoya <pablogr2928@gmail.com> 1757519510 -0400	reset: moving to 9e5ed3a87f43d798d2c4d34618006faa33e0bb7c
+9e5ed3a87f43d798d2c4d34618006faa33e0bb7c a02b1aaa506f5a4556ed7832aa9ef21a7fba5c17 PabloMoya <pablogr2928@gmail.com> 1757691532 -0400	merge unidad: Merge made by the 'ort' strategy.
+a02b1aaa506f5a4556ed7832aa9ef21a7fba5c17 80118e7d52b02efea31d137baec39b81d4212eb5 PabloMoya <pablogr2928@gmail.com> 1757693841 -0400	commit: elimine el atributo operador y creacion de las migraciones de user y unidades
+80118e7d52b02efea31d137baec39b81d4212eb5 4e58881e47aa28f0346ce4d0adc065cfe1b5d125 PabloMoya <pablogr2928@gmail.com> 1758123530 -0400	commit: Característica: Implementación de la funcionalidad de subida de fotos de perfil de usuario
+4e58881e47aa28f0346ce4d0adc065cfe1b5d125 220fcbb07ccfa1e55fc98551b80cc9b5ff8af348 PabloMoya <pablogr2928@gmail.com> 1758668005 -0400	commit: Añadir vistas de gestión de usuarios con índice y páginas de visualización.
+220fcbb07ccfa1e55fc98551b80cc9b5ff8af348 1c434b89f46d2e96449cd7cb80fa5dc96f40bd43 PabloMoya <pablogr2928@gmail.com> 1758734771 -0400	commit: Implementación de componentes Livewire para la gestión de Solicitudes y Unidades de Transporte

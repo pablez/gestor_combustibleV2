@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('unidades_organizacionales', function (Blueprint $table) {
-            $table->bigIncrements('id_unidad_organizacional');
+            $table->id('id_unidad_organizacional');
             $table->string('codigo_unidad', 20)->unique();
             $table->string('nombre_unidad', 100)->unique();
             $table->enum('tipo_unidad', ['Superior', 'Ejecutiva', 'Operativa']);

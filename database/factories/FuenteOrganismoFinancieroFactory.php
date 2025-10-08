@@ -17,7 +17,13 @@ class FuenteOrganismoFinancieroFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'codigo' => $this->faker->unique()->bothify('FOF-###'),
+            'descripcion' => $this->faker->sentence(),
+            'tipo_fuente' => $this->faker->randomElement(['Nacional','Departamental','Municipal','Internacional','Otros']),
+            'organismo_financiador' => $this->faker->company(),
+            'requiere_contrapartida' => false,
+            'porcentaje_contrapartida' => 0,
+            'activo' => true,
         ];
     }
 }

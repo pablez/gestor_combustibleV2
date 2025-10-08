@@ -27,14 +27,45 @@ $logout = function (Logout $logout) {
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    
+                    {{-- KPIs removed per request --}}
+                    
+                    {{-- Gestión de Vehículos --}}
+                    @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = ! open" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700 focus:outline-none focus:text-gray-700 dark:focus:text-gray-300 focus:border-gray-300 dark:focus:border-gray-700 transition duration-150 ease-in-out">
+                                <span>Vehículos</span>
+                                <svg class="ms-2 -me-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-transition class="absolute z-50 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5">
+                                <div class="py-1">
+                                    <a href="{{ route('tipos-vehiculo.index') }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" wire:navigate>Tipos de Vehículos</a>
+                                    <a href="{{ route('unidades-transporte.index') }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" wire:navigate>Unidades de Transporte</a>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Unidades Organizacionales --}}
                     @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
                         <x-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
                             Unidades
                         </x-nav-link>
                     @endif
-                    @if(auth()->user())
-                        <x-nav-link :href="route('users.dashboard')" :active="request()->routeIs('users.dashboard')" wire:navigate>
-                            Gestor de Usuarios
+                    
+                    {{-- Solicitudes --}}
+                    @if(auth()->user() && (auth()->user()->hasPermissionTo('solicitudes.ver') || auth()->user()->hasRole('Admin_General')))
+                        <x-nav-link :href="route('solicitudes.index')" :active="request()->routeIs('solicitudes*')" wire:navigate>
+                            Solicitudes
+                        </x-nav-link>
+                    @endif
+                    
+                    {{-- Gestión de Usuarios --}}
+                    @if(auth()->user() && (auth()->user()->hasPermissionTo('usuarios.ver') || auth()->user()->hasRole('Admin_General')))
+                        <x-nav-link :href="route('users.dashboard')" :active="request()->routeIs('users.*')" wire:navigate>
+                            Usuarios
                         </x-nav-link>
                     @endif
                 </div>
@@ -137,15 +168,39 @@ $logout = function (Logout $logout) {
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
 
+            {{-- KPIs (mobile) removed per request --}}
+
+            {{-- Gestión de Vehículos Mobile --}}
             @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
-                <x-responsive-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
-                    Unidades
+                <div class="px-4 py-2 mt-4">
+                    <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vehículos</div>
+                </div>
+                <x-responsive-nav-link :href="route('tipos-vehiculo.index')" :active="request()->routeIs('tipos-vehiculo*')" wire:navigate>
+                    Tipos de Vehículos
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('unidades-transporte.index')" :active="request()->routeIs('unidades-transporte*')" wire:navigate>
+                    Unidades de Transporte
                 </x-responsive-nav-link>
             @endif
 
-            @if(auth()->user())
-                <x-responsive-nav-link :href="route('users.dashboard')" :active="request()->routeIs('users.dashboard')" wire:navigate>
-                    Gestor de Usuarios
+            {{-- Unidades Organizacionales Mobile --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
+                <x-responsive-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
+                    Unidades Organizacionales
+                </x-responsive-nav-link>
+            @endif
+
+            {{-- Solicitudes Mobile --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo('solicitudes.ver') || auth()->user()->hasRole('Admin_General')))
+                <x-responsive-nav-link :href="route('solicitudes.index')" :active="request()->routeIs('solicitudes*')" wire:navigate>
+                    Solicitudes
+                </x-responsive-nav-link>
+            @endif
+
+            {{-- Gestión de Usuarios Mobile --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo('usuarios.ver') || auth()->user()->hasRole('Admin_General')))
+                <x-responsive-nav-link :href="route('users.dashboard')" :active="request()->routeIs('users.*')" wire:navigate>
+                    Gestión de Usuarios
                 </x-responsive-nav-link>
             @endif
 
