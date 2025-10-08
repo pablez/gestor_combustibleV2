@@ -13,9 +13,16 @@ class FuenteOrganismoFinancieroSeeder extends Seeder
      */
     public function run(): void
     {
-        FuenteOrganismoFinanciero::insert([
+        $fuentes = [
             ['codigo' => 'FN-001', 'descripcion' => 'Fondo Nacional', 'tipo_fuente' => 'Nacional', 'organismo_financiador' => 'Ministerio de Transporte', 'porcentaje_contrapartida' => 0],
             ['codigo' => 'FD-001', 'descripcion' => 'Fondo Departamental', 'tipo_fuente' => 'Departamental', 'organismo_financiador' => 'Gobernación', 'porcentaje_contrapartida' => 10.00],
-        ]);
+        ];
+
+        foreach ($fuentes as $fuente) {
+            FuenteOrganismoFinanciero::updateOrCreate(
+                ['codigo' => $fuente['codigo']],
+                $fuente
+            );
+        }
     }
 }

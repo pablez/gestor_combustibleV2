@@ -10,6 +10,9 @@ class UnidadOrganizacionalSeeder extends Seeder
 {
     public function run(): void
     {
+        // Deshabilitar verificación de claves foráneas temporalmente
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
         $names = [
             'SECRETARÍA DEPARTAMENTAL DE PLANIFICACIÓN Y DESARROLLO ESTRATÉGICO',
             'SECRETARÍA DEPARTAMENTAL DE FINANZAS Y ADMINISTRACIÓN',
@@ -89,6 +92,9 @@ class UnidadOrganizacionalSeeder extends Seeder
                 'updated_at' => now(),
             ]);
         }
+        
+        // Reactivar verificación de claves foráneas
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 
     private function generateSiglas(string $name): string

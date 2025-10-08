@@ -1,0 +1,9 @@
+Implementación de componentes Livewire para la gestión de Solicitudes y Unidades de Transporte
+
+- Se añadieron los componentes de creación e indexación para Solicitudes y Unidades de Transporte.
+- Se crearon modelos para CategoríaProgramática, FuenteOrganismoFinanciero, SolicitudCombustible y Unidades de Transporte.
+- Se desarrollaron fábricas para los nuevos modelos a fin de facilitar las pruebas y la siembra.
+- Se crearon migraciones para las nuevas tablas de la base de datos relacionadas con los modelos.
+- Se implementaron sembradores para CategoríaProgramática y FuenteOrganismoFinanciero con datos iniciales.
+- Se desarrollaron vistas para los componentes Livewire que gestionan las interacciones del usuario al crear y listar solicitudes y unidades.
+- Se añadieron pruebas para SolicitudCombustible para garantizar la funcionalidad y la validación del modelo.

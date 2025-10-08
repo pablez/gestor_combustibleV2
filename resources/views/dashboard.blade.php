@@ -53,9 +53,14 @@
                 </main>
 
                 <aside class="lg:col-span-1">
-                    {{-- KPIs de Unidades (costado) --}}
+                    {{-- KPIs de Unidades --}}
                     @livewire('kpis.unidades-kpis')
                 </aside>
+            </div>
+
+            {{-- Nueva sección para KPIs de Vehículos --}}
+            <div class="mt-8">
+                @livewire('kpis.vehiculos-kpis')
             </div>
 
         </div>

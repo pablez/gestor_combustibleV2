@@ -1,0 +1,4 @@
+0000000000000000000000000000000000000000 9e5ed3a87f43d798d2c4d34618006faa33e0bb7c PabloMoya <pablogr2928@gmail.com> 1757518724 -0400	branch: Created from 9e5ed3a87f43d798d2c4d34618006faa33e0bb7c
+9e5ed3a87f43d798d2c4d34618006faa33e0bb7c 9e5ed3a87f43d798d2c4d34618006faa33e0bb7c PabloMoya <pablogr2928@gmail.com> 1757519020 -0400	Branch: renamed refs/heads/backup/commit-9e5ed3a to refs/heads/unidad
+9e5ed3a87f43d798d2c4d34618006faa33e0bb7c d526fd6e1058ce65bf03714117ab8f6a80ad27b1 PabloMoya <pablogr2928@gmail.com> 1757519508 -0400	reset: moving to origin/main
+d526fd6e1058ce65bf03714117ab8f6a80ad27b1 a513d21efa232561d5243e7176797dd4f40f3047 PabloMoya <pablogr2928@gmail.com> 1757691166 -0400	commit: Refactor Unidad Organizacional views and routes
