@@ -22,7 +22,12 @@ return new class extends Migration
 
                 // Poblar la columna con el id extraído del JSON (si es posible)
                 try {
-                    DB::statement("UPDATE registro_auditorias SET registro_afectado_id = (JSON_UNQUOTE(JSON_EXTRACT(registro_afectado, '$.id')) + 0) WHERE registro_afectado IS NOT NULL");
+                    // Solo intentar la actualización con funciones JSON si el driver es MySQL
+                    if (DB::getDriverName() === 'mysql') {
+                        DB::statement("UPDATE registro_auditorias SET registro_afectado_id = (JSON_UNQUOTE(JSON_EXTRACT(registro_afectado, '$.id')) + 0) WHERE registro_afectado IS NOT NULL");
+                    } else {
+                        \Log::info('Skipping JSON_EXTRACT update for registro_afectado_id on driver: ' . DB::getDriverName());
+                    }
                 } catch (\Exception $e) {
                     // fall back: intentar con un select/update más seguro por lotes podría implementarse
                     \Log::warning('Materialize registro_afectado_id: update statement failed: ' . $e->getMessage());

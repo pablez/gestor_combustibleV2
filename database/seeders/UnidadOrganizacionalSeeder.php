@@ -10,8 +10,9 @@ class UnidadOrganizacionalSeeder extends Seeder
 {
     public function run(): void
     {
-        // Deshabilitar verificación de claves foráneas temporalmente
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+    // Deshabilitar verificación de claves foráneas temporalmente de forma agnóstica
+    // Esto funciona tanto en MySQL como en SQLite durante tests
+    \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
 
         $names = [
             'SECRETARÍA DEPARTAMENTAL DE PLANIFICACIÓN Y DESARROLLO ESTRATÉGICO',
@@ -93,8 +94,8 @@ class UnidadOrganizacionalSeeder extends Seeder
             ]);
         }
         
-        // Reactivar verificación de claves foráneas
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+    // Reactivar verificación de claves foráneas
+    \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
     }
 
     private function generateSiglas(string $name): string
