@@ -30,7 +30,7 @@ return new class extends Migration
             $table->unsignedInteger('kilometraje_ultimo_mantenimiento')->default(0);
             $table->unsignedInteger('proximo_mantenimiento_km')->nullable();
 
-            $table->foreignId('id_unidad_organizacional')->constrained('unidad_organizacionals');
+            $table->foreignId('id_unidad_organizacional')->references('id_unidad_organizacional')->on('unidades_organizacionales');
             $table->foreignId('id_conductor_asignado')->nullable()->constrained('users');
             $table->enum('estado_operativo', ['Operativo','Mantenimiento','Taller','Baja','Reserva'])->default('Operativo');
 

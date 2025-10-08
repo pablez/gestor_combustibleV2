@@ -24,9 +24,10 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            // Keep only the fields defined in the base users migration to avoid
+            // inserting into columns that may not exist in all environments.
             'username' => fake()->unique()->userName(),
             'name' => fake()->name(),
-            'nombre' => fake()->firstName(),
             'apellido_paterno' => fake()->lastName(),
             'apellido_materno' => fake()->lastName(),
             'ci' => fake()->unique()->numerify('########'),
@@ -35,7 +36,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            // Roles are managed by Spatie; assign via assignRole in seeders/tests
+            // Roles/relations defaults
             'id_supervisor' => null,
             'id_unidad_organizacional' => null,
             'activo' => true,

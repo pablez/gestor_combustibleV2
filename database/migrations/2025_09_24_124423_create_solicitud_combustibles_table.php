@@ -28,7 +28,7 @@ return new class extends Migration
             $table->timestamp('fecha_aprobacion')->nullable();
             $table->text('observaciones_aprobacion')->nullable();
 
-            $table->foreignId('id_cat_programatica')->nullable()->constrained('categoria_programatica');
+            $table->foreignId('id_cat_programatica')->nullable()->constrained('categoria_programaticas');
             $table->foreignId('id_fuente_org_fin')->nullable()->constrained('fuente_organismo_financieros');
             $table->decimal('saldo_actual_combustible', 12, 2)->nullable();
 

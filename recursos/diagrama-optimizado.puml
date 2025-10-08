@@ -1,7 +1,7 @@
 @startuml
 !theme plain
 
-' =================== ENTIDADES CORREGIDAS ===================
+' =================== ENTIDADES CORREGIDAS =================== '
 
 entity Usuario {
   *id_usuario : BIGINT UNSIGNED <<PK>>
@@ -173,12 +173,27 @@ entity UnidadTransporte {
   revision_tecnica_hasta : DATE NULL
   fecha_ultimo_servicio : DATE NULL
   --
+  foto_principal : VARCHAR(255) NULL
+  galeria_fotos : JSON NULL
+  foto_tarjeton_propiedad : VARCHAR(255) NULL
+  foto_cedula_identidad : VARCHAR(255) NULL
+  foto_seguro : VARCHAR(255) NULL
+  foto_revision_tecnica : VARCHAR(255) NULL
+  metadatos_imagenes : JSON NULL
+  --
   observaciones : TEXT(500) NULL
   activo : BOOLEAN NOT NULL DEFAULT TRUE
   --
   created_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   updated_at : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 }
+
+' Nota de migración: campos de imagen agregados por migración
+note right of UnidadTransporte
+  Migración: database/migrations/2025_09_30_112637_add_images_to_unidad_transportes_table.php
+  Campos añadidos: foto_principal, galeria_fotos, foto_tarjeton_propiedad,
+  foto_cedula_identidad, foto_seguro, foto_revision_tecnica, metadatos_imagenes
+end note
 
 entity TipoCombustible {
   *id_tipo_combustible : BIGINT UNSIGNED <<PK>>
@@ -349,8 +364,8 @@ entity RegistroAuditoria {
   id_usuario : BIGINT UNSIGNED <<FK>> NOT NULL
   fecha_hora : TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
   --
-  accion_realizada : VARCHAR(50) NOT NULL
-  tabla_afectada : VARCHAR(50) NOT NULL
+  accion_realizada : VARCHAR(50) NOT NULL <<INDEX>>
+  tabla_afectada : VARCHAR(50) NOT NULL <<INDEX>>
   registro_afectado : JSON NOT NULL
   --
   valores_anteriores : JSON NULL
@@ -361,8 +376,20 @@ entity RegistroAuditoria {
   sesion_id : VARCHAR(100) NULL
   --
   modulo_sistema : VARCHAR(50) NULL
-  nivel_criticidad : ENUM('BAJO','MEDIO','ALTO','CRÍTICO') DEFAULT 'MEDIO'
+  nivel_criticidad : ENUM('BAJO','MEDIO','ALTO','CRÍTICO') DEFAULT 'MEDIO' <<INDEX>>
 }
+
+' Nota de migraciones: índices añadidos en auditoría
+note right of RegistroAuditoria
+  Migraciones:
+  - database/migrations/2025_09_30_125006_add_indexes_for_vehiculo_images.php
+    (intentó agregar índices para auditoría; validar nombres de columnas)
+  - database/migrations/2025_09_30_130357_add_audit_indexes_for_images.php
+    Índices añadidos/planificados:
+      idx_auditoria_tabla_accion  => (tabla_afectada, accion_realizada)
+      idx_auditoria_modulo        => (modulo_sistema)
+      idx_auditoria_criticidad    => (nivel_criticidad)
+end note
 
 ' =================== RELACIONES CORREGIDAS ===================
 
