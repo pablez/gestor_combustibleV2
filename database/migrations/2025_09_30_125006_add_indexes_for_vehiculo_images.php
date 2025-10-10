@@ -24,7 +24,12 @@ return new class extends Migration
         if (!Schema::hasColumn('registro_auditorias', 'registro_afectado_id')) {
             try {
                 // Añadimos columna generada que extrae el id del JSON y la convierte a número
-                DB::statement("ALTER TABLE `registro_auditorias` ADD COLUMN `registro_afectado_id` BIGINT UNSIGNED GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(`registro_afectado`, '$.id')) + 0) VIRTUAL");
+                // Esta operación es específica de MySQL (JSON_UNQUOTE/JSON_EXTRACT y columnas generated).
+                if (DB::getDriverName() === 'mysql') {
+                    DB::statement("ALTER TABLE `registro_auditorias` ADD COLUMN `registro_afectado_id` BIGINT UNSIGNED GENERATED ALWAYS AS (JSON_UNQUOTE(JSON_EXTRACT(`registro_afectado`, '$.id')) + 0) VIRTUAL");
+                } else {
+                    \Log::info('Skipping creation of generated column registro_afectado_id for driver: ' . DB::getDriverName());
+                }
             } catch (\Exception $e) {
                 // Si la sentencia falla por versión de MySQL u otras razones, lo registramos
                 \Log::warning('No se pudo crear columna generada registro_afectado_id: ' . $e->getMessage());
@@ -33,7 +38,11 @@ return new class extends Migration
 
         // Crear índice compuesto usando la columna generada (si existe)
         try {
-            DB::statement("CREATE INDEX idx_auditoria_registro_fecha ON registro_auditorias(tabla_afectada, registro_afectado_id, fecha_hora)");
+            if (DB::getDriverName() === 'mysql') {
+                DB::statement("CREATE INDEX idx_auditoria_registro_fecha ON registro_auditorias(tabla_afectada, registro_afectado_id, fecha_hora)");
+            } else {
+                \Log::info('Skipping creation of idx_auditoria_registro_fecha for driver: ' . DB::getDriverName());
+            }
         } catch (\Exception $e) {
             \Log::warning('No se pudo crear índice idx_auditoria_registro_fecha: ' . $e->getMessage());
         }
@@ -63,7 +72,13 @@ return new class extends Migration
         // Intentar eliminar la columna generada si existe
         if (Schema::hasColumn('registro_auditorias', 'registro_afectado_id')) {
             try {
-                DB::statement("ALTER TABLE `registro_auditorias` DROP COLUMN `registro_afectado_id`");
+                if (DB::getDriverName() === 'mysql') {
+                    DB::statement("ALTER TABLE `registro_auditorias` DROP COLUMN `registro_afectado_id`");
+                } else {
+                    // Si no es MySQL, la columna fue probablemente creada como columna normal
+                    // y será eliminada por Blueprint dropColumn en el otro migration si procede.
+                    \Log::info('Skipping drop of generated column registro_afectado_id for driver: ' . DB::getDriverName());
+                }
             } catch (\Exception $e) {
                 \Log::warning('No se pudo eliminar columna generada registro_afectado_id: ' . $e->getMessage());
             }

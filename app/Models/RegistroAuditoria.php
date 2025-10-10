@@ -124,13 +124,48 @@ class RegistroAuditoria extends Model
      */
     public function scopePorRegistroAfectadoId($query, $id)
     {
-        // Si la columna existe en el esquema, usarla
+        // Si la columna existe en el esquema, preferimos usarla, pero también
+        // añadimos un fallback por fila para cubrir registros antiguos donde
+        // la columna aún no se haya poblado (NULL). Hacemos una cláusula OR
+        // combinando la columna física y la extracción JSON.
         if (\Schema::hasColumn($this->getTable(), 'registro_afectado_id')) {
-            return $query->where('registro_afectado_id', $id);
+            $driver = \DB::getDriverName();
+            return $query->where(function ($q) use ($id, $driver) {
+                $q->where('registro_afectado_id', $id);
+
+                if ($driver === 'mysql') {
+                    $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(registro_afectado, '$.id')) + 0 = ?", [$id]);
+                } elseif ($driver === 'sqlite') {
+                    $q->orWhereRaw("json_extract(registro_afectado, '$.id') = ?", [$id]);
+                    $q->orWhere('registro_afectado', 'like', '%"id":' . (int) $id . '%');
+                    $q->orWhere('registro_afectado', 'like', '%"id":"' . (int) $id . '"%');
+                } else {
+                    // Fallback genérico
+                    $q->orWhere('registro_afectado', 'like', '%"id":' . (int) $id . '%');
+                }
+            });
         }
 
-        // Fallback: comparar JSON extract como string → cast a número
-    return $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(registro_afectado, '$.id')) + 0 = ?", [$id]);
+        // Fallback: usar la función JSON adecuada según el driver
+        $driver = \DB::getDriverName();
+        if ($driver === 'mysql') {
+            return $query->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(registro_afectado, '$.id')) + 0 = ?", [$id]);
+        }
+
+        // SQLite: usar json_extract directamente (evitamos CAST que en algunas
+        // combinaciones de PDO/SQLite puede comportarse distinto).
+        if ($driver === 'sqlite') {
+            // Algunos SQLite pueden devolver el número como integer o string;
+            // añadimos un fallback usando LIKE que sea más tolerante.
+            return $query->where(function ($q) use ($id) {
+                $q->whereRaw("json_extract(registro_afectado, '$.id') = ?", [$id])
+                  ->orWhere('registro_afectado', 'like', '%"id":' . (int) $id . '%')
+                  ->orWhere('registro_afectado', 'like', '%"id":"' . (int) $id . '"%');
+            });
+        }
+
+        // Fallback general (otros drivers): filtrar por LIKE como último recurso
+        return $query->where('registro_afectado', 'like', '%"id":' . (int) $id . '%');
     }
 
     // Métodos útiles para logging
