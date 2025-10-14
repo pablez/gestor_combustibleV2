@@ -84,7 +84,7 @@ class ImagenVehiculoService
 
         return [
             'ruta' => $rutaCompleta,
-            'url' => Storage::disk(self::DISK)->url($rutaCompleta),
+            'url' => '/storage/' . $rutaCompleta,
             'tamaño' => 0,
             'dimensiones' => $config['dimensions'],
             'metadatos' => [
@@ -92,7 +92,9 @@ class ImagenVehiculoService
                 'tipo_mime' => $archivo->getMimeType(),
                 'fecha_subida' => now(),
                 'usuario_id' => auth()->id(),
-                'tipo_imagen' => $tipoImagen
+                'tipo_imagen' => $tipoImagen,
+                // Marcamos la imagen como en procesamiento para que la UI muestre placeholder
+                'processing' => true,
             ]
         ];
     }
@@ -145,6 +147,54 @@ class ImagenVehiculoService
         }
         
         return $rutaThumbnail;
+    }
+
+    /**
+     * Optimizar una imagen existente en storage: reencodar y reducir tamaño si aplica.
+     * Devuelve true si se optimizó correctamente, false si no fue posible.
+     */
+    public function optimizarImagen(string $rutaImagen): bool
+    {
+        try {
+            if (!Storage::disk(self::DISK)->exists($rutaImagen)) {
+                \Log::warning("optimizarImagen: archivo no existe: {$rutaImagen}");
+                return false;
+            }
+
+            $contenido = Storage::disk(self::DISK)->get($rutaImagen);
+
+            // Si Intervention Image está disponible, re-encode y resize conservando aspecto
+            if (class_exists('\Intervention\Image\Facades\Image')) {
+                try {
+                    $img = Image::make($contenido);
+
+                    // Redimensionar manteniendo relación de aspecto hasta un ancho máximo razonable
+                    $maxWidth = 1200;
+                    if ($img->width() > $maxWidth) {
+                        $img->resize($maxWidth, null, function ($constraint) {
+                            $constraint->aspectRatio();
+                            $constraint->upsize();
+                        });
+                    }
+
+                    // Re-encode a jpg con calidad moderada
+                    $optimized = $img->encode('jpg', 80);
+
+                    Storage::disk(self::DISK)->put($rutaImagen, $optimized);
+                    return true;
+                } catch (\Exception $e) {
+                    \Log::warning('optimizarImagen (Intervention) falló: ' . $e->getMessage());
+                    // fallback al comportamiento simple más abajo
+                }
+            }
+
+            // Fallback: si no hay Intervention o falló, reescribimos el mismo contenido (no-opt)
+            Storage::disk(self::DISK)->put($rutaImagen, $contenido);
+            return true;
+        } catch (\Exception $e) {
+            \Log::error('optimizarImagen: error procesando ' . $rutaImagen . ' - ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**

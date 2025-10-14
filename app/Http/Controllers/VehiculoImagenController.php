@@ -214,7 +214,15 @@ class VehiculoImagenController extends Controller
             return $vehiculo->galeria_fotos_urls;
         }
 
-        $url = $vehiculo->getFotoDocumentoUrl($tipoImagen);
+        // Para foto_principal, usar el accessor directo
+        if ($tipoImagen === 'foto_principal') {
+            $url = $vehiculo->foto_principal_url;
+            return $url ? [$url] : [];
+        }
+
+        // Para otros tipos de documentos, remover el prefijo 'foto_'
+        $tipo = str_replace('foto_', '', $tipoImagen);
+        $url = $vehiculo->getFotoDocumentoUrl($tipo);
         return $url ? [$url] : [];
     }
 }

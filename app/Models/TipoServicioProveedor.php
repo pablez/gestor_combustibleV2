@@ -10,6 +10,8 @@ class TipoServicioProveedor extends Model
     /** @use HasFactory<\Database\Factories\TipoServicioProveedorFactory> */
     use HasFactory;
 
+    protected $table = 'tipo_servicio_proveedors';
+
     protected $fillable = [
         'codigo',
         'nombre',

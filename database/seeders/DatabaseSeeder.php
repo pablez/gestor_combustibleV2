@@ -29,5 +29,6 @@ class DatabaseSeeder extends Seeder
         $this->call(FuenteOrganismoFinancieroSeeder::class);
         $this->call(CategoriaProgramaticaSeeder::class);
         $this->call(SolicitudCombustibleSeeder::class);
+        $this->call(PresupuestoSeeder::class);
     }
 }

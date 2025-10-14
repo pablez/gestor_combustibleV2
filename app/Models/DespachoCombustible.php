@@ -27,6 +27,15 @@ class DespachoCombustible extends Model
         'id_usuario_validador',
     ];
 
+    protected $casts = [
+        'fecha_despacho' => 'datetime',
+        'fecha_validacion' => 'datetime',
+        'validado' => 'boolean',
+        'litros_despachados' => 'decimal:2',
+        'precio_por_litro' => 'integer',
+        'costo_total' => 'integer',
+    ];
+
     public function solicitud()
     {
         return $this->belongsTo(SolicitudCombustible::class, 'id_solicitud');

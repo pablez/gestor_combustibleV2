@@ -33,6 +33,17 @@ class SolicitudCombustible extends Model
         'rendimiento_estimado',
     ];
 
+    protected $casts = [
+        'fecha_solicitud' => 'datetime',
+        'fecha_aprobacion' => 'datetime',
+        'urgente' => 'boolean',
+        'cantidad_litros_solicitados' => 'decimal:2',
+        'saldo_actual_combustible' => 'decimal:2',
+        'km_actual' => 'integer',
+        'km_proyectado' => 'integer',
+        'rendimiento_estimado' => 'decimal:2',
+    ];
+
     public function solicitante()
     {
         return $this->belongsTo(User::class, 'id_usuario_solicitante');

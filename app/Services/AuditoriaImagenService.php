@@ -49,8 +49,12 @@ class AuditoriaImagenService
                 'accion' => $accion
             ]);
 
-            // No relanzamos la excepción en producción ni en tests; ya la
-            // registramos en log y se intenta el fallback a DB::table().
+            // Durante la ejecución de tests queremos ver la excepción para depurar
+            // en lugar de silenciarla; relanzarla hará que el test falle con el
+            // error original y muestre la causa.
+            if (app()->runningUnitTests() || app()->environment('testing')) {
+                throw $e;
+            }
 
             // Fallback directo a DB para asegurar que la auditoría quede registrada incluso
             // cuando el contexto HTTP/Model cause errores dentro de jobs.

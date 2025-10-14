@@ -34,9 +34,6 @@ class ImagenesVehiculosSeeder extends Seeder
         $this->command->info('Datos de prueba de imágenes creados exitosamente.');
     }
 
-    /**
-     * Crear estructura de directorios necesaria
-     */
     private function crearEstructuraDirectorios(): void
     {
         $directorios = [
@@ -50,30 +47,23 @@ class ImagenesVehiculosSeeder extends Seeder
         }
     }
 
-    /**
-     * Generar imágenes de prueba para un vehículo
-     */
     private function generarImagenesPrueba(UnidadTransporte $vehiculo): void
     {
         $placaLimpia = preg_replace('/[^A-Za-z0-9]/', '', $vehiculo->placa);
-        
-        // Crear carpetas del vehículo
+
         $carpetas = ['principales', 'galeria', 'documentos'];
         foreach ($carpetas as $carpeta) {
             Storage::disk('public')->makeDirectory("vehiculos/{$placaLimpia}/{$carpeta}");
         }
 
-        // Simular archivos de imagen (crear archivos dummy)
         $rutasImagenes = [];
 
-        // Foto principal
-        if (rand(1, 100) > 30) { // 70% probabilidad
+        if (rand(1, 100) > 30) {
             $rutaPrincipal = "vehiculos/{$placaLimpia}/principales/foto_principal_" . now()->format('YmdHis') . "_dummy.jpg";
             Storage::disk('public')->put($rutaPrincipal, $this->crearImagenDummy('Foto Principal ' . $vehiculo->placa));
             $rutasImagenes['foto_principal'] = $rutaPrincipal;
         }
 
-        // Galería de fotos
         $numGaleria = rand(0, 5);
         $galeriaFotos = [];
         for ($i = 0; $i < $numGaleria; $i++) {
@@ -85,7 +75,6 @@ class ImagenesVehiculosSeeder extends Seeder
             $rutasImagenes['galeria_fotos'] = $galeriaFotos;
         }
 
-        // Documentos
         $documentos = [
             'foto_tarjeton_propiedad' => 'Tarjetón de Propiedad',
             'foto_cedula_identidad' => 'Cédula de Identidad',
@@ -94,14 +83,13 @@ class ImagenesVehiculosSeeder extends Seeder
         ];
 
         foreach ($documentos as $campo => $nombre) {
-            if (rand(1, 100) > 40) { // 60% probabilidad
+            if (rand(1, 100) > 40) {
                 $rutaDoc = "vehiculos/{$placaLimpia}/documentos/{$campo}_" . now()->format('YmdHis') . "_dummy.jpg";
                 Storage::disk('public')->put($rutaDoc, $this->crearImagenDummy($nombre . ' ' . $vehiculo->placa));
                 $rutasImagenes[$campo] = $rutaDoc;
             }
         }
 
-        // Actualizar el vehículo con las rutas
         $datosActualizacion = [];
         $metadatos = [];
 
@@ -134,20 +122,15 @@ class ImagenesVehiculosSeeder extends Seeder
         $datosActualizacion['metadatos_imagenes'] = $metadatos;
         $vehiculo->update($datosActualizacion);
 
-        // Crear registros de auditoría de prueba
         $this->crearRegistrosAuditoria($vehiculo, $rutasImagenes);
 
         $this->command->line("✓ Imágenes generadas para vehículo {$vehiculo->placa}");
     }
 
-    /**
-     * Crear registros de auditoría de prueba
-     */
     private function crearRegistrosAuditoria(UnidadTransporte $vehiculo, array $rutasImagenes): void
     {
         foreach ($rutasImagenes as $tipoImagen => $ruta) {
             $rutas = is_array($ruta) ? $ruta : [$ruta];
-            
             foreach ($rutas as $rutaIndividual) {
                 RegistroAuditoria::create([
                     'tabla_afectada' => 'unidad_transportes',
@@ -175,19 +158,9 @@ class ImagenesVehiculosSeeder extends Seeder
         }
     }
 
-    /**
-     * Crear contenido dummy para imágenes de prueba
-     */
     private function crearImagenDummy(string $texto): string
     {
-        // Crear un archivo de texto simple que simule una imagen
-        return "DUMMY IMAGE FILE\n" .
-               "========================\n" .
-               "Texto: {$texto}\n" .
-               "Fecha: " . now()->toDateTimeString() . "\n" .
-               "Tamaño simulado: 1024 bytes\n" .
-               "Tipo: image/jpeg (simulado)\n" .
-               "========================\n" .
-               str_repeat("X", 800); // Llenar para simular contenido
+        return 'DUMMY IMAGE CONTENT: ' . $texto;
     }
 }
+

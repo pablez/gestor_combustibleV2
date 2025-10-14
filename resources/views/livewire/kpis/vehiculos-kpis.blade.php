@@ -75,8 +75,79 @@
         </div>
     </div>
 
-    {{-- Gráficos y distribuciones --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {{-- Área principal: Consumo promedio destacado y Últimos vehículos a la derecha --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {{-- Consumo Promedio (destacado, ocupa 2 columnas en lg) --}}
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-4">Consumo Promedio por Categoría (L/100km)</h4>
+            @if(count($consumoPromedio) > 0)
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    @foreach($consumoPromedio as $categoria => $consumo)
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <h5 class="text-sm font-medium text-gray-900 dark:text-white">{{ $categoria }}</h5>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">Promedio</div>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{{ $consumo['ciudad'] ?? 'N/A' }}L</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Ciudad</div>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="text-sm text-gray-700 dark:text-gray-300">Carretera: <span class="font-medium">{{ $consumo['carretera'] ?? 'N/A' }}L</span></div>
+                                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                                    <div class="h-2 bg-indigo-500 rounded-full" style="width: {{ min(100, ($consumo['ciudad'] ?? 0) * 2) }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No hay datos disponibles</p>
+            @endif
+        </div>
+
+        {{-- Últimos Vehículos Registrados (columna lateral) --}}
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-4">Últimos Vehículos Registrados</h4>
+            @if(count($topUnidadesTransporte) > 0)
+                <div class="space-y-3">
+                    @foreach($topUnidadesTransporte as $vehiculo)
+                        <div class="flex items-start p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <div class="flex-shrink-0 mr-3">
+                                @if(!empty($vehiculo['foto_principal_url']))
+                                    <img src="{{ $vehiculo['foto_principal_url'] }}" alt="Foto {{ $vehiculo['placa'] }}" class="w-14 h-10 object-cover rounded">
+                                @else
+                                    <div class="w-14 h-10 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center text-xs text-gray-500">Sin foto</div>
+                                @endif
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $vehiculo['placa'] }} <span class="text-xs text-gray-500">• {{ $vehiculo['tipo'] }}</span></p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $vehiculo['modelo'] }} — {{ $vehiculo['unidad'] }}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs text-gray-400">{{ \Carbon\Carbon::parse($vehiculo['created_at'])->diffForHumans() }}</p>
+                                        <p class="text-xs text-gray-500 mt-1">Fotos: <span class="font-medium">{{ $vehiculo['total_fotos'] }}</span></p>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <a href="/vehiculos/{{ $vehiculo['id'] }}/imagenes" class="inline-flex items-center px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Ver imágenes</a>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-8">No hay datos disponibles</p>
+            @endif
+        </div>
+    </div>
+
+    {{-- Luego mostrar distribuciones: Vehículos por Categoría y Estado en su propia fila --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {{-- Vehículos por Categoría --}}
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-4">Vehículos por Categoría</h4>
@@ -106,6 +177,7 @@
                                 style="width: {{ array_sum($vehiculosPorCategoria) > 0 ? ($count / array_sum($vehiculosPorCategoria)) * 100 : 0 }}%">
                             </div>
                         </div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ round(array_sum($vehiculosPorCategoria) > 0 ? ($count / array_sum($vehiculosPorCategoria)) * 100 : 0, 1) }}%</div>
                     @endforeach
                 </div>
             @else
@@ -144,6 +216,7 @@
                                 style="width: {{ array_sum($vehiculosPorEstado) > 0 ? ($count / array_sum($vehiculosPorEstado)) * 100 : 0 }}%">
                             </div>
                         </div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ round(array_sum($vehiculosPorEstado) > 0 ? ($count / array_sum($vehiculosPorEstado)) * 100 : 0, 1) }}%</div>
                     @endforeach
                 </div>
             @else
@@ -152,63 +225,5 @@
         </div>
     </div>
 
-    {{-- Consumo promedio por categoría --}}
-    @if(count($consumoPromedio) > 0)
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-4">Consumo Promedio por Categoría (L/100km)</h4>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                @foreach($consumoPromedio as $categoria => $consumo)
-                    <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-2">{{ $categoria }}</h5>
-                        <div class="space-y-1">
-                            <p class="text-xs text-gray-600 dark:text-gray-400">
-                                Ciudad: <span class="font-medium">{{ $consumo['ciudad'] ?? 'N/A' }}L</span>
-                            </p>
-                            <p class="text-xs text-gray-600 dark:text-gray-400">
-                                Carretera: <span class="font-medium">{{ $consumo['carretera'] ?? 'N/A' }}L</span>
-                            </p>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
-
-    {{-- Últimos vehículos registrados --}}
-    @if(count($topUnidadesTransporte) > 0)
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-            <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-4">Últimos Vehículos Registrados</h4>
-            <div class="space-y-3">
-                @foreach($topUnidadesTransporte as $vehiculo)
-                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <div class="flex items-center space-x-3">
-                            <div class="flex-shrink-0">
-                                <div class="w-2 h-2 rounded-full 
-                                    @if($vehiculo['estado'] === 'Operativo') bg-green-500
-                                    @elseif($vehiculo['estado'] === 'Mantenimiento') bg-yellow-500
-                                    @elseif($vehiculo['estado'] === 'Taller') bg-orange-500
-                                    @elseif($vehiculo['estado'] === 'Baja') bg-red-500
-                                    @elseif($vehiculo['estado'] === 'Reserva') bg-blue-500
-                                    @else bg-gray-500 @endif">
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                    {{ $vehiculo['placa'] }} - {{ $vehiculo['modelo'] }}
-                                </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ $vehiculo['tipo'] }} | {{ $vehiculo['unidad'] }}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ \Carbon\Carbon::parse($vehiculo['created_at'])->diffForHumans() }}
-                            </p>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
+    {{-- (Se eliminaron bloques duplicados: consumo promedio y últimos vehículos que aparecían dos veces) --}}
 </div>

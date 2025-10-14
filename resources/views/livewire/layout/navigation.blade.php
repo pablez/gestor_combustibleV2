@@ -1,213 +1,226 @@
-<?php
 
-use App\Livewire\Actions\Logout;
-
-$logout = function (Logout $logout) {
-    $logout();
-
-    $this->redirect('/', navigate: true);
-};
-
-?>
-
-<nav x-data="{ open: false }" class="bg-white dark:bg-gray-900 shadow-sm">
-    <!-- Primary Navigation Menu -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex">
-                <!-- Logo -->
-                <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}" wire:navigate>
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800 dark:text-gray-200" />
-                    </a>
-                </div>
-
-                <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-                    
-                    {{-- KPIs removed per request --}}
-                    
-                    {{-- Gestión de Vehículos --}}
-                    @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
-                        <div class="relative" x-data="{ open: false }">
-                            <button @click="open = ! open" class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700 focus:outline-none focus:text-gray-700 dark:focus:text-gray-300 focus:border-gray-300 dark:focus:border-gray-700 transition duration-150 ease-in-out">
-                                <span>Vehículos</span>
-                                <svg class="ms-2 -me-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                            <div x-show="open" @click.away="open = false" x-transition class="absolute z-50 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5">
-                                <div class="py-1">
-                                    <a href="{{ route('tipos-vehiculo.index') }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" wire:navigate>Tipos de Vehículos</a>
-                                    <a href="{{ route('unidades-transporte.index') }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" wire:navigate>Unidades de Transporte</a>
-                                </div>
-                            </div>
+<div class="flex flex-col h-full">
+    <!-- Navigation Links -->
+    <nav class="mt-4 px-4 space-y-1 flex-1 overflow-y-auto">
+            <!-- Dashboard -->
+            <a href="{{ route('dashboard') }}" wire:navigate
+               class="flex items-center px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('dashboard') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6a2 2 0 01-2 2H10a2 2 0 01-2-2V5z"></path>
+                </svg>
+                Dashboard
+            </a>
+            
+            {{-- Gestión de Vehículos --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
+                <div x-data="{ open: false }" class="space-y-1">
+                    <button @click="open = ! open" 
+                            class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                            </svg>
+                            Vehículos
                         </div>
-                    @endif
-
-                    {{-- Unidades Organizacionales --}}
-                    @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
-                        <x-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
-                            Unidades
-                        </x-nav-link>
-                    @endif
-                    
-                    {{-- Solicitudes --}}
-                    @if(auth()->user() && (auth()->user()->hasPermissionTo('solicitudes.ver') || auth()->user()->hasRole('Admin_General')))
-                        <x-nav-link :href="route('solicitudes.index')" :active="request()->routeIs('solicitudes*')" wire:navigate>
-                            Solicitudes
-                        </x-nav-link>
-                    @endif
-                    
-                    {{-- Gestión de Usuarios --}}
-                    @if(auth()->user() && (auth()->user()->hasPermissionTo('usuarios.ver') || auth()->user()->hasRole('Admin_General')))
-                        <x-nav-link :href="route('users.dashboard')" :active="request()->routeIs('users.*')" wire:navigate>
-                            Usuarios
-                        </x-nav-link>
-                    @endif
+                        <svg :class="{'rotate-180': open}" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div x-show="open" x-transition class="pl-4 space-y-1">
+                        <a href="{{ route('tipos-vehiculo.index') }}" wire:navigate
+                           class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('tipos-vehiculo*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                            Tipos de Vehículos
+                        </a>
+                        <a href="{{ route('unidades-transporte.index') }}" wire:navigate
+                           class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('unidades-transporte*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                            Unidades de Transporte
+                        </a>
+                        <a href="{{ route('vehiculos.frontend.imagenes', ['vehiculo' => 26]) }}" wire:navigate
+                           class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('vehiculos.frontend.imagenes') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                            Imágenes de Vehículos
+                        </a>
+                    </div>
                 </div>
-            </div>
+            @endif
 
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
-                <x-dropdown align="right" width="48">
-                    <x-slot name="trigger">
-                        @php
-                            $user = auth()->user();
-                            $avatarUrl = $user->profile_photo_url ?? null;
-                            $initials = trim(collect(explode(' ', $user->name))->map(fn($p) => $p[0] ?? '')->take(2)->join('')) ?: strtoupper(substr($user->email ?? '', 0, 1));
-                        @endphp
-                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
-                            <div class="flex items-center gap-3">
-                                {{-- Avatar or initials --}}
-                                @if($avatarUrl)
-                                    <img src="{{ $avatarUrl }}" alt="{{ $user->name }}" class="h-8 w-8 rounded-full object-cover" />
-                                @else
-                                    <div class="h-8 w-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-medium text-sm">{{ strtoupper($initials) }}</div>
-                                @endif
-                                <div class="flex flex-col items-start text-left">
-                                    @php
-                                        $displayName = $user->full_name ?? $user->name;
-                                        $role = $user->primary_role ? str_replace('_', ' ', $user->primary_role) : 'Sin rol';
-                                        $unidadNombre = optional($user->unidad)->nombre_unidad ?? 'Sin unidad asignada';
-                                    @endphp
-                                    <div x-data="{{ json_encode(['name' => $displayName]) }}" x-text="name" x-on:profile-updated.window="name = $event.detail.name" class="font-medium text-sm text-gray-800 dark:text-gray-100">{{ $displayName }}</div>
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $role }}</div>
-                                    <div class="text-xs text-gray-400 dark:text-gray-500">{{ $unidadNombre }}</div>
-                                </div>
-
-                                <div class="ms-1">
-                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </button>
-                    </x-slot>
-
-                    <x-slot name="content">
-                        <x-dropdown-link :href="route('profile')" wire:navigate>
-                            {{ __('Profile') }}
-                        </x-dropdown-link>
-
-                        <!-- Authentication -->
-                        <button wire:click="logout" class="w-full text-start">
-                            <x-dropdown-link>
-                                {{ __('Log Out') }}
-                            </x-dropdown-link>
-                        </button>
-                    </x-slot>
-                </x-dropdown>
-            </div>
-
-            <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-900 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-900 focus:text-gray-500 dark:focus:text-gray-400 transition duration-150 ease-in-out">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            {{-- Unidades Organizacionales --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
+                <a href="{{ route('unidades.index') }}" wire:navigate
+                   class="flex items-center px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('unidades*') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                     </svg>
-                </button>
+                    Unidades
+                </a>
+            @endif
+            
+            {{-- Solicitudes --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo('solicitudes.ver') || auth()->user()->hasRole('Admin_General')))
+                <a href="{{ route('solicitudes.index') }}" wire:navigate
+                   class="flex items-center px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('solicitudes*') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Solicitudes
+                </a>
+            @endif
+                    
+            {{-- Gestión de Combustible --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo(\App\Constants\Permissions::DESPACHOS_VER) || auth()->user()->hasPermissionTo(\App\Constants\Permissions::CONSUMOS_VER) || auth()->user()->hasRole('Admin_General')))
+                <div x-data="{ open: false }" class="space-y-1">
+                    <button @click="open = ! open" 
+                            class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                            </svg>
+                            Combustible
+                        </div>
+                        <svg :class="{'rotate-180': open}" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div x-show="open" x-transition class="pl-4 space-y-1">
+                        @if(auth()->user()->hasPermissionTo(\App\Constants\Permissions::DESPACHOS_VER) || auth()->user()->hasRole('Admin_General'))
+                            <a href="{{ route('despachos.index') }}" wire:navigate
+                               class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('despachos*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                                Despachos
+                            </a>
+                        @endif
+                        @if(auth()->user()->hasPermissionTo(\App\Constants\Permissions::CONSUMOS_VER) || auth()->user()->hasRole('Admin_General'))
+                            <a href="{{ route('consumos.index') }}" wire:navigate
+                               class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('consumos*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                                Consumos
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            {{-- Gestión de Presupuestos --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo(\App\Constants\Permissions::PRESUPUESTOS_VER) || auth()->user()->hasRole('Admin_General')))
+                <a href="{{ route('presupuestos.index') }}" wire:navigate
+                   class="flex items-center px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('presupuestos*') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Presupuestos
+                </a>
+            @endif
+
+            {{-- Administración del Sistema --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo(\App\Constants\Permissions::SOLICITUDES_APROBACION_VER) || auth()->user()->hasPermissionTo(\App\Constants\Permissions::CODIGOS_REGISTRO_VER) || auth()->user()->hasRole('Admin_General')))
+                <div x-data="{ open: false }" class="space-y-1">
+                    <button @click="open = ! open" 
+                            class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Administración
+                        </div>
+                        <svg :class="{'rotate-180': open}" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div x-show="open" x-transition class="pl-4 space-y-1">
+                        @if(auth()->user()->hasPermissionTo(\App\Constants\Permissions::SOLICITUDES_APROBACION_VER) || auth()->user()->hasRole('Admin_General'))
+                            <a href="{{ route('solicitudes-aprobacion.index') }}" wire:navigate
+                               class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('solicitudes-aprobacion*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                                Solicitudes de Aprobación
+                            </a>
+                        @endif
+                        @if(auth()->user()->hasPermissionTo(\App\Constants\Permissions::CODIGOS_REGISTRO_VER) || auth()->user()->hasRole('Admin_General'))
+                            <a href="{{ route('codigos-registro.index') }}" wire:navigate
+                               class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('codigos-registro*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                                Códigos de Registro
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            @endif
+                    
+            {{-- Gestión de Proveedores --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo(\App\Constants\Permissions::PROVEEDORES_VER) || auth()->user()->hasRole('Admin_General')))
+                <div x-data="{ open: false }" class="space-y-1">
+                    <button @click="open = ! open" 
+                            class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m7-10h0m-5-5h1m-1 8h1"></path>
+                            </svg>
+                            Proveedores
+                        </div>
+                        <svg :class="{'rotate-180': open}" class="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div x-show="open" x-transition class="pl-4 space-y-1">
+                        @if(auth()->user()->hasPermissionTo(\App\Constants\Permissions::TIPOS_SERVICIO_PROVEEDOR_VER) || auth()->user()->hasRole('Admin_General'))
+                            <a href="{{ route('tipos-servicio-proveedor.index') }}" wire:navigate
+                               class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('tipos-servicio-proveedor*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                                Tipos de Servicio
+                            </a>
+                        @endif
+                        @if(auth()->user()->hasPermissionTo(\App\Constants\Permissions::PROVEEDORES_VER) || auth()->user()->hasRole('Admin_General'))
+                            <a href="{{ route('proveedores.index') }}" wire:navigate
+                               class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('proveedores*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                                Proveedores
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            @endif
+                    
+            {{-- Gestión de Usuarios --}}
+            @if(auth()->user() && (auth()->user()->hasPermissionTo('usuarios.ver') || auth()->user()->hasRole('Admin_General')))
+                <a href="{{ route('users.dashboard') }}" wire:navigate
+                   class="flex items-center px-4 py-3 text-sm font-medium rounded-lg {{ request()->routeIs('users.*') ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                    </svg>
+                    Usuarios
+                </a>
+            @endif
+    </nav>
+
+    <!-- User Profile Section -->
+    <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+        @php
+            $user = auth()->user();
+            $avatarUrl = $user->profile_photo_url ?? null;
+            $initials = trim(collect(explode(' ', $user->name))->map(fn($p) => $p[0] ?? '')->take(2)->join('')) ?: strtoupper(substr($user->email ?? '', 0, 1));
+            $displayName = $user->full_name ?? $user->name;
+            $role = $user->primary_role ? str_replace('_', ' ', $user->primary_role) : 'Sin rol';
+        @endphp
+        <div class="flex items-center mb-3">
+            @if($avatarUrl)
+                <img src="{{ $avatarUrl }}" alt="{{ $user->name }}" class="h-10 w-10 rounded-full object-cover" />
+            @else
+                <div class="h-10 w-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-medium text-sm">{{ strtoupper($initials) }}</div>
+            @endif
+            <div class="ml-3 flex-1 min-w-0">
+                <div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{{ $displayName }}</div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $role }}</div>
             </div>
+        </div>
+        <div class="space-y-1">
+            <a href="{{ route('profile') }}" wire:navigate
+               class="flex items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                Perfil
+            </a>
+            <button wire:click="logout" 
+                    class="flex items-center w-full px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Cerrar Sesión
+            </button>
         </div>
     </div>
-
-    <!-- Responsive Navigation Menu -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-white dark:bg-gray-900">
-        <div class="pt-4 pb-3 px-4">
-                <div class="flex items-center gap-3">
-                @php
-                    $user = auth()->user();
-                    $avatarUrl = $user->profile_photo_url ?? null;
-                    $initials = trim(collect(explode(' ', $user->name))->map(fn($p) => $p[0] ?? '')->take(2)->join('')) ?: strtoupper(substr($user->email ?? '', 0, 1));
-                @endphp
-                @if($avatarUrl)
-                    <img src="{{ $avatarUrl }}" alt="{{ $user->name }}" class="h-10 w-10 rounded-full object-cover" />
-                @else
-                    <div class="h-10 w-10 rounded-full bg-indigo-500 text-white flex items-center justify-center font-medium">{{ strtoupper($initials) }}</div>
-                @endif
-                <div class="flex-1">
-                    @php
-                        $displayName = $user->full_name ?? $user->name;
-                        $role = $user->primary_role ? str_replace('_', ' ', $user->primary_role) : 'Sin rol';
-                        $unidadNombre = optional($user->unidad)->nombre_unidad ?? 'Sin unidad asignada';
-                    @endphp
-                    <div class="font-medium text-base text-gray-800 dark:text-gray-100">{{ $displayName }}</div>
-                    <div class="text-sm text-gray-500">{{ $user->email }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $role }}</div>
-                    <div class="text-xs text-gray-400 dark:text-gray-500">{{ $unidadNombre }}</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="pt-2 pb-3 space-y-1 px-2">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-
-            {{-- KPIs (mobile) removed per request --}}
-
-            {{-- Gestión de Vehículos Mobile --}}
-            @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
-                <div class="px-4 py-2 mt-4">
-                    <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vehículos</div>
-                </div>
-                <x-responsive-nav-link :href="route('tipos-vehiculo.index')" :active="request()->routeIs('tipos-vehiculo*')" wire:navigate>
-                    Tipos de Vehículos
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('unidades-transporte.index')" :active="request()->routeIs('unidades-transporte*')" wire:navigate>
-                    Unidades de Transporte
-                </x-responsive-nav-link>
-            @endif
-
-            {{-- Unidades Organizacionales Mobile --}}
-            @if(auth()->user() && (auth()->user()->hasPermissionTo('unidades.ver') || auth()->user()->hasRole('Admin_General')))
-                <x-responsive-nav-link :href="route('unidades.index')" :active="request()->routeIs('unidades*')" wire:navigate>
-                    Unidades Organizacionales
-                </x-responsive-nav-link>
-            @endif
-
-            {{-- Solicitudes Mobile --}}
-            @if(auth()->user() && (auth()->user()->hasPermissionTo('solicitudes.ver') || auth()->user()->hasRole('Admin_General')))
-                <x-responsive-nav-link :href="route('solicitudes.index')" :active="request()->routeIs('solicitudes*')" wire:navigate>
-                    Solicitudes
-                </x-responsive-nav-link>
-            @endif
-
-            {{-- Gestión de Usuarios Mobile --}}
-            @if(auth()->user() && (auth()->user()->hasPermissionTo('usuarios.ver') || auth()->user()->hasRole('Admin_General')))
-                <x-responsive-nav-link :href="route('users.dashboard')" :active="request()->routeIs('users.*')" wire:navigate>
-                    Gestión de Usuarios
-                </x-responsive-nav-link>
-            @endif
-
-            <x-responsive-nav-link :href="route('profile')" wire:navigate>
-                {{ __('Profile') }}
-            </x-responsive-nav-link>
-
-            <button wire:click="logout" class="w-full text-start block px-4 py-2 text-sm text-red-600">Cerrar sesión</button>
-        </div>
-</nav>
+</div>

@@ -87,7 +87,10 @@ class VehiculosKpis extends Component
                     'tipo' => $unidad->tipoVehiculo?->nombre ?? 'Sin tipo',
                     'unidad' => $unidad->unidadOrganizacional?->codigo_unidad ?? 'Sin unidad',
                     'estado' => $unidad->estado_operativo,
-                    'created_at' => $unidad->created_at
+                    'created_at' => $unidad->created_at,
+                    // Campos extra para la vista
+                    'total_fotos' => $unidad->total_fotos ?? 0,
+                    'foto_principal_url' => $unidad->foto_principal ? asset('storage/' . $unidad->foto_principal) : null,
                 ];
             })
             ->toArray();

@@ -100,7 +100,7 @@ class UnidadTransporte extends Model
     // Métodos para manejo de imágenes
     public function getFotoPrincipalUrlAttribute()
     {
-        return $this->foto_principal ? asset('storage/' . $this->foto_principal) : null;
+        return $this->foto_principal ? '/storage/' . $this->foto_principal : null;
     }
 
     public function getGaleriaFotosUrlsAttribute()
@@ -110,14 +110,14 @@ class UnidadTransporte extends Model
         }
         
         return collect($this->galeria_fotos)->map(function ($foto) {
-            return asset('storage/' . $foto);
+            return '/storage/' . $foto;
         })->toArray();
     }
 
     public function getFotoDocumentoUrl($tipo)
     {
         $campo = "foto_{$tipo}";
-        return $this->$campo ? asset('storage/' . $this->$campo) : null;
+        return $this->$campo ? '/storage/' . $this->$campo : null;
     }
 
     public function getTotalFotosAttribute()
@@ -266,5 +266,44 @@ class UnidadTransporte extends Model
     public function obtenerHistorialImagenes()
     {
         return app(\App\Services\AuditoriaImagenService::class)->obtenerHistorialImagenes($this);
+    }
+
+    /**
+     * Marcar una imagen como procesada: limpia el flag 'processing' en metadatos
+     * y asegura la ruta final si fue actualizada por el job.
+     */
+    public function marcarImagenProcesada(string $tipoImagen, string $ruta): void
+    {
+        $metadatosActuales = $this->metadatos_imagenes ?? [];
+
+        // Si el tipo es galería, buscar entrada correspondiente por ruta
+        if ($tipoImagen === 'galeria_fotos') {
+            if (!isset($metadatosActuales['galeria']) || !is_array($metadatosActuales['galeria'])) return;
+
+            foreach ($metadatosActuales['galeria'] as &$entrada) {
+                if (isset($entrada['ruta']) && $entrada['ruta'] === $ruta) {
+                    $entrada['processing'] = false;
+                    $entrada['fecha_procesada'] = now();
+                }
+            }
+
+            $this->metadatos_imagenes = $metadatosActuales;
+            $this->save();
+            return;
+        }
+
+        // Para imágenes individuales (foto_principal, foto_seguro, etc.)
+        if (isset($metadatosActuales[$tipoImagen]) && is_array($metadatosActuales[$tipoImagen])) {
+            $metadatosActuales[$tipoImagen]['processing'] = false;
+            $metadatosActuales[$tipoImagen]['fecha_procesada'] = now();
+
+            // Si la ruta difiere, actualizarla
+            if (!empty($metadatosActuales[$tipoImagen]['ruta']) && $metadatosActuales[$tipoImagen]['ruta'] !== $ruta) {
+                $metadatosActuales[$tipoImagen]['ruta'] = $ruta;
+            }
+
+            $this->metadatos_imagenes = $metadatosActuales;
+            $this->save();
+        }
     }
 }

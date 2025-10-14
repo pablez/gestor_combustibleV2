@@ -15,16 +15,22 @@ class VehiculoImagenes extends Component
     public UnidadTransporte $vehiculo;
     public string $tipoImagenActivo = 'foto_principal';
     public $imagenes = [];
+    // Map de metadatos por tipo y por URL (para saber si una imagen está en processing)
+    public array $imagenesMetadatos = [];
+    public array $metadatos = [];
     public $nuevasImagenes = [];
     public bool $mostrarModal = false;
     public string $modalTipo = '';
     public bool $cargando = false;
+    public bool $polling = false;
     public array $erroresValidacion = [];
     public array $configuracionTipos = [];
 
+    // Escuchar eventos del componente padre y del uploader integrado
     protected $listeners = [
         'abrirModalImagenes' => 'abrirModal',
-        'cerrarModalImagenes' => 'cerrarModal'
+        'cerrarModalImagenes' => 'cerrarModal',
+        'imagenSubida' => 'onImagenSubida'
     ];
 
     public function mount(UnidadTransporte $vehiculo)
@@ -32,27 +38,100 @@ class VehiculoImagenes extends Component
         $this->vehiculo = $vehiculo;
         $this->configuracionTipos = config('vehiculos-imagenes.tipos', []);
         $this->cargarImagenes();
+        $this->checkProcessingFlag();
     }
 
     public function cargarImagenes()
     {
         try {
             $this->cargando = true;
-            
+            // refrescar metadatos del modelo
+            $this->metadatos = $this->vehiculo->metadatos_imagenes ?? [];
+            $this->imagenes = [];
+            $this->imagenesMetadatos = [];
+
             foreach ($this->configuracionTipos as $tipo => $config) {
                 if ($tipo === 'galeria_fotos') {
-                    $this->imagenes[$tipo] = $this->vehiculo->galeria_fotos_urls ?? [];
+                    $urls = $this->vehiculo->galeria_fotos_urls ?? [];
+                    $this->imagenes[$tipo] = $urls;
+
+                    // Mapear metadatos por URL para la galería
+                    $this->imagenesMetadatos[$tipo] = [];
+                    if (!empty($this->metadatos['galeria']) && is_array($this->metadatos['galeria'])) {
+                        foreach ($this->metadatos['galeria'] as $entrada) {
+                            if (!empty($entrada['ruta'])) {
+                                try {
+                                    $url = '/storage/' . $entrada['ruta'];
+                                    $this->imagenesMetadatos[$tipo][$url] = $entrada;
+                                } catch (\Exception $e) {
+                                    // ignore if url generation fails
+                                }
+                            }
+                        }
+                    }
                 } else {
                     $tipoLimpio = str_replace('foto_', '', $tipo);
                     $url = $this->vehiculo->getFotoDocumentoUrl($tipoLimpio);
                     $this->imagenes[$tipo] = $url ? [$url] : [];
+
+                    // Mapear metadatos por URL para imagenes individuales
+                    $this->imagenesMetadatos[$tipo] = [];
+                    if (!empty($this->metadatos[$tipo]) && is_array($this->metadatos[$tipo]) && !empty($this->metadatos[$tipo]['ruta'])) {
+                        try {
+                            $metaUrl = '/storage/' . $this->metadatos[$tipo]['ruta'];
+                            $this->imagenesMetadatos[$tipo][$metaUrl] = $this->metadatos[$tipo];
+                        } catch (\Exception $e) {
+                            // ignore
+                        }
+                    }
                 }
             }
+
+            // Actualizar polling según metadatos
+            $this->checkProcessingFlag();
         } catch (\Exception $e) {
             $this->erroresValidacion['carga'] = 'Error al cargar imágenes: ' . $e->getMessage();
         } finally {
             $this->cargando = false;
         }
+    }
+
+    /**
+     * Indica si existen imágenes con metadato 'processing' en true.
+     */
+    public function checkProcessingFlag(): void
+    {
+        $this->polling = false;
+        $meta = $this->metadatos ?? [];
+
+        // Revisar galería
+        if (!empty($meta['galeria']) && is_array($meta['galeria'])) {
+            foreach ($meta['galeria'] as $entrada) {
+                if (!empty($entrada['processing'])) {
+                    $this->polling = true;
+                    return;
+                }
+            }
+        }
+
+        // Revisar demás tipos
+        foreach ($meta as $key => $value) {
+            if ($key === 'galeria') continue;
+            if (is_array($value) && !empty($value['processing'])) {
+                $this->polling = true;
+                return;
+            }
+        }
+    }
+
+    /**
+     * Método público invocado por wire:poll para refrescar el vehículo y los metadatos.
+     */
+    public function refreshVehiculo()
+    {
+        $this->vehiculo->refresh();
+        $this->cargarImagenes();
+        $this->checkProcessingFlag();
     }
 
     public function cambiarTipoImagen($tipo)
@@ -365,5 +444,31 @@ class VehiculoImagenes extends Component
             'cargando' => $this->cargando,
             'errores' => $this->erroresValidacion
         ]);
+    }
+
+    public function onImagenSubida($payload = null)
+    {
+        // Manejar payload esperado: ['resultado' => [...], 'tipo' => '...', 'placa' => '...']
+        try {
+            if (is_array($payload) && isset($payload['resultado'])) {
+                $resultado = $payload['resultado'];
+                $tipo = $payload['tipo'] ?? null;
+
+                // Si es galería, agregar referencia
+                if ($tipo === 'galeria_fotos') {
+                    $this->vehiculo->agregarFotoAGaleria($resultado['ruta'], $resultado['metadatos'] ?? []);
+                } elseif ($tipo) {
+                    // Actualizar campo de imagen sencilla
+                    $this->vehiculo->actualizarImagenConAuditoria($tipo, $resultado['ruta'], $resultado['metadatos'] ?? []);
+                }
+            }
+        } catch (\Exception $e) {
+            // registrar pero seguir con la recarga
+            \Log::error('onImagenSubida error: ' . $e->getMessage());
+        } finally {
+            $this->vehiculo->refresh();
+            $this->cargarImagenes();
+            $this->checkProcessingFlag();
+        }
     }
 }

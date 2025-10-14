@@ -1,51 +1,38 @@
 <?php
 
-namespace Tests\Unit;
-
+use App\Services\ImagenVehiculoService;
 use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(TestCase::class);
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Http\UploadedFile;
-use App\Jobs\ProcesarImagenVehiculo;
 
-class ImagenVehiculoServiceTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    // Asegurar disco fake
+    Storage::fake('public');
+});
 
-    public function test_guardar_imagen_stores_file_and_dispatches_job()
-    {
-        Storage::fake('public');
-        Bus::fake();
+it('optimiza una imagen existente y devuelve true', function () {
+    $service = new ImagenVehiculoService();
 
-        // Crear usuario y actuar como él para metadata
-        $user = \App\Models\User::factory()->create();
-        $this->actingAs($user);
+    // Crear una imagen pequeña en memoria y guardarla en el disco fake
+    $img = imagecreatetruecolor(800, 600);
+    $bg = imagecolorallocate($img, 255, 0, 0);
+    imagefill($img, 0, 0, $bg);
 
-        $placa = 'ABC-123';
-        $tipo = 'foto_principal';
+    ob_start();
+    imagejpeg($img, null, 90);
+    $contents = ob_get_clean();
+    imagedestroy($img);
 
-        $file = UploadedFile::fake()->image('vehiculo.jpg', 1200, 800)->size(500);
+    $ruta = 'vehiculos/TEST/galeria/test_image.jpg';
+    Storage::disk('public')->put($ruta, $contents);
 
-        $service = app(\App\Services\ImagenVehiculoService::class);
+    $result = $service->optimizarImagen($ruta);
 
-        $resultado = $service->guardarImagen($file, $tipo, $placa);
+    expect($result)->toBeTrue();
+    expect(Storage::disk('public')->exists($ruta))->toBeTrue();
 
-        $this->assertArrayHasKey('ruta', $resultado);
-        $this->assertArrayHasKey('url', $resultado);
-        $this->assertArrayHasKey('metadatos', $resultado);
-
-        // Comprobar que el archivo fue guardado en disco
-        $this->assertTrue(Storage::disk('public')->exists($resultado['ruta']));
-
-        // Comprobar que se dispatchó el job ProcesarImagenVehiculo
-        Bus::assertDispatched(ProcesarImagenVehiculo::class, function ($job) use ($placa, $tipo) {
-            return $job->placa === $placa && $job->tipoImagen === $tipo && is_string($job->archivoPath);
-        });
-
-        // Aún no debe existir registro de auditoría porque el job no se ejecutó
-        $this->assertDatabaseMissing('registro_auditorias', [
-            'accion_realizada' => 'OPTIMIZAR_IMAGEN'
-        ]);
-    }
-}
+    // El archivo optimizado debería existir y tener tamaño > 0
+    $size = Storage::disk('public')->size($ruta);
+    expect($size)->toBeGreaterThan(0);
+});

@@ -13,11 +13,9 @@
         </div>
     </x-slot>
 
-    <div class="py-8">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            
-            {{-- Mensaje de bienvenida contextual --}}
-            <div class="mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+    <div class="w-full">
+        {{-- Mensaje de bienvenida contextual --}}
+        <div class="mb-8 bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
                 <h3 class="text-xl font-semibold mb-2">
                     @if(auth()->user()->hasRole('Admin_General'))
                         Panel de Administración General
@@ -63,6 +61,24 @@
                 @livewire('kpis.vehiculos-kpis')
             </div>
 
-        </div>
+            {{-- KPIs de imágenes de vehículos --}}
+            <div class="mt-6">
+                @livewire('kpis.imagenes-vehiculos-kpis')
+            </div>
+
+            {{-- KPIs de Despachos de Combustible - Solo para administradores --}}
+            @if(auth()->user()->hasAnyRole(['Admin_General', 'Admin_Secretaria']))
+            <div class="mt-6">
+                @livewire('kpis.despachos-combustible-kpis')
+            </div>
+            @endif
+
+            {{-- KPIs de Proveedores - Solo para administradores --}}
+            @if(auth()->user()->hasAnyRole(['Admin_General', 'Admin_Secretaria']))
+            <div class="mt-6">
+                @livewire('kpis.proveedores-kpis')
+            </div>
+            @endif
+
     </div>
 </x-app-layout>
