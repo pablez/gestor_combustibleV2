@@ -46,6 +46,8 @@ use App\Livewire\Kpis\UsersKpis;
 // Solicitudes
 use App\Livewire\Solicitud\Index as SolicitudIndex;
 use App\Livewire\Solicitud\Create as SolicitudCreate;
+use App\Livewire\Solicitud\Show as SolicitudShow;
+use App\Livewire\Solicitud\Edit as SolicitudEdit;
 
 // Categorías Programáticas
 use App\Livewire\CategoriaProgramatica\Index as CategoriaProgramaticaIndex;
@@ -79,8 +81,23 @@ use App\Livewire\ConsumoCombustible\Edit as ConsumoCombustibleEdit;
 // Presupuestos
 use App\Livewire\Presupuesto\Index as PresupuestoIndex;
 use App\Livewire\Presupuesto\Create as PresupuestoCreate;
-use App\Livewire\Presupuesto\Show as PresupuestoShow;
 use App\Livewire\Presupuesto\Edit as PresupuestoEdit;
+use App\Livewire\Presupuesto\Show as PresupuestoShow;
+
+// Códigos de Registro
+use App\Livewire\CodigoRegistro\Index as CodigoRegistroIndex;
+use App\Livewire\CodigoRegistro\Create as CodigoRegistroCreate;
+
+// Solicitudes de Aprobación de Usuario
+use App\Livewire\SolicitudAprobacionUsuario\Index as SolicitudAprobacionUsuarioIndex;
+use App\Livewire\SolicitudAprobacionUsuario\Create as SolicitudAprobacionUsuarioCreate;
+use App\Livewire\SolicitudAprobacionUsuario\Show as SolicitudAprobacionUsuarioShow;
+
+// Reportes
+use App\Livewire\Reportes\ReportesIndex;
+use App\Livewire\Reportes\CombustibleReporte;
+use App\Livewire\Reportes\PresupuestoReporte;
+use App\Livewire\Reportes\ReportesTest;
 
 Route::middleware(['auth'])->group(function () {
     Route::post('/profile/photo', [ProfilePhotoController::class, 'upload'])->name('profile.photo.upload');
@@ -123,7 +140,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('solicitudes')->name('solicitudes.')->group(function () {
         Route::get('/', SolicitudIndex::class)->name('index');
         Route::get('/create', SolicitudCreate::class)->name('create');
-        // Las rutas adicionales se pueden agregar según necesidad
+        Route::get('/{solicitud}', SolicitudShow::class)->name('show');
+        Route::get('/{solicitud}/edit', SolicitudEdit::class)->name('edit');
     });
     
     // === CATEGORÍAS PROGRAMÁTICAS ===
@@ -239,3 +257,16 @@ Route::middleware(['auth', \App\Http\Middleware\RegistrarAccionesImagenes::class
             ->name('vehiculos.imagenes.thumbnail');
     });
 });
+
+// === REPORTES ===
+Route::prefix('reportes')->name('reportes.')->middleware(['auth', 'permission:reportes.ver'])->group(function () {
+    Route::get('/', ReportesIndex::class)->name('index');
+    Route::get('/combustible', CombustibleReporte::class)->name('combustible')->middleware('permission:reportes.combustible');
+    Route::get('/combustible/generar', [App\Http\Controllers\ReporteCombustibleController::class, 'generar'])->name('combustible.generar')->middleware('permission:reportes.combustible');
+    Route::get('/presupuesto', PresupuestoReporte::class)->name('presupuesto')->middleware('permission:reportes.presupuesto');
+});
+
+// Test route temporally
+Route::get('/reportes-test', ReportesTest::class)->middleware('auth')->name('reportes.test');
+
+require __DIR__.'/auth.php';

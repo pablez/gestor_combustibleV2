@@ -65,4 +65,10 @@ final class Permissions
     public const CODIGOS_REGISTRO_VER = 'codigos_registro.ver';
     public const CODIGOS_REGISTRO_CREAR = 'codigos_registro.crear';
     public const CODIGOS_REGISTRO_ELIMINAR = 'codigos_registro.eliminar';
+
+    // Reportes
+    public const REPORTES_VER = 'reportes.ver';
+    public const REPORTES_COMBUSTIBLE = 'reportes.combustible';
+    public const REPORTES_PRESUPUESTO = 'reportes.presupuesto';
+    public const REPORTES_GENERAR = 'reportes.generar';
 }

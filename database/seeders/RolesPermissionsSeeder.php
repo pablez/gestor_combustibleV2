@@ -77,6 +77,12 @@ class RolesPermissionsSeeder extends Seeder
             P::CODIGOS_REGISTRO_VER,
             P::CODIGOS_REGISTRO_CREAR,
             P::CODIGOS_REGISTRO_ELIMINAR,
+
+            // Reportes
+            P::REPORTES_VER,
+            P::REPORTES_COMBUSTIBLE,
+            P::REPORTES_PRESUPUESTO,
+            P::REPORTES_GENERAR,
         ];
 
         // Create permissions
@@ -89,7 +95,7 @@ class RolesPermissionsSeeder extends Seeder
         $admin = Role::firstOrCreate(['name' => 'Admin_General']);
     $admin->syncPermissions($permissions);
 
-        // Admin_Secretaria: user and unidades management, solicitudes (no aprobaciones), proveedores, despachos, presupuestos, solicitudes_aprobacion, codigos_registro
+        // Admin_Secretaria: user and unidades management, solicitudes (no aprobaciones), proveedores, despachos, presupuestos, solicitudes_aprobacion, codigos_registro, reportes
         $secretaria = Role::firstOrCreate(['name' => 'Admin_Secretaria']);
         $secretariaPerms = array_filter($permissions, function ($p) {
             return str_starts_with($p, 'usuarios.') || 
@@ -101,15 +107,17 @@ class RolesPermissionsSeeder extends Seeder
                    str_starts_with($p, 'consumos.') ||
                    str_starts_with($p, 'presupuestos.') ||
                    str_starts_with($p, 'solicitudes_aprobacion.') ||
-                   str_starts_with($p, 'codigos_registro.');
+                   str_starts_with($p, 'codigos_registro.') ||
+                   str_starts_with($p, 'reportes.');
         });
         $secretaria->syncPermissions($secretariaPerms);
 
-        // Supervisor: ver/editar solicitudes y aprobar, ver solicitudes_aprobacion
+        // Supervisor: ver/editar solicitudes y aprobar, ver solicitudes_aprobacion, reportes
         $supervisor = Role::firstOrCreate(['name' => 'Supervisor']);
         $supervisorPerms = array_filter($permissions, fn($p) => str_starts_with($p, 'solicitudes.') || 
                                                                 $p === P::UNIDADES_VER ||
-                                                                str_starts_with($p, 'solicitudes_aprobacion.'));
+                                                                str_starts_with($p, 'solicitudes_aprobacion.') ||
+                                                                str_starts_with($p, 'reportes.'));
         $supervisor->syncPermissions($supervisorPerms);
 
         // Conductor: permisos mínimos: ver solicitudes propias y despachos

@@ -1,9 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-                Dashboard - Sistema de Gestión de Combustible
-            </h2>
+            <div>
+                <h1 class="font-bold text-2xl text-gray-800 dark:text-gray-100 leading-tight">Gestor de Combustible — Panel de Control</h1>
+                <h3 class="text-sm text-gray-600 dark:text-gray-400 mt-1">Resumen operativo y KPIs en tiempo real — {{ now()->format('d/m/Y') }} @if(auth()->user()->unidad) · {{ auth()->user()->unidad->nombre_unidad }} @endif</h3>
+            </div>
             <div class="text-sm text-gray-600 dark:text-gray-400">
                 Bienvenido, {{ auth()->user()->full_name }}
                 <span class="ml-2 px-2 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-xs">
@@ -44,40 +45,47 @@
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <main class="lg:col-span-2">
-                    {{-- KPIs de Usuarios (contenido principal) --}}
-                    @livewire('kpis.users-kpis')
-                </main>
-
-                <aside class="lg:col-span-1">
-                    {{-- KPIs de Unidades --}}
-                    @livewire('kpis.unidades-kpis')
-                </aside>
-            </div>
-
-            {{-- Nueva sección para KPIs de Vehículos --}}
-            <div class="mt-8">
-                @livewire('kpis.vehiculos-kpis')
-            </div>
-
-            {{-- KPIs de imágenes de vehículos --}}
-            <div class="mt-6">
-                @livewire('kpis.imagenes-vehiculos-kpis')
-            </div>
-
-            {{-- KPIs de Despachos de Combustible - Solo para administradores --}}
+            {{-- Dashboard Ejecutivo para Administradores --}}
             @if(auth()->user()->hasAnyRole(['Admin_General', 'Admin_Secretaria']))
-            <div class="mt-6">
-                @livewire('kpis.despachos-combustible-kpis')
-            </div>
-            @endif
+                @livewire('kpis.dashboard-ejecutivo')
+                
+                {{-- Accesos Rápidos para Administradores --}}
+                <div class="mt-8">
+                    @livewire('kpis.accesos-rapidos')
+                </div>
 
-            {{-- KPIs de Proveedores - Solo para administradores --}}
-            @if(auth()->user()->hasAnyRole(['Admin_General', 'Admin_Secretaria']))
-            <div class="mt-6">
-                @livewire('kpis.proveedores-kpis')
-            </div>
+                {{-- Alertas en Tiempo Real --}}
+                @livewire('kpis.alertas-en-tiempo-real')
+
+                {{-- Generador de Códigos de Registro --}}
+                @if(auth()->user()->hasAnyRole(['Admin_General', 'Admin_Secretaria']))
+                    <div class="mt-8">
+                        @livewire('kpis.codigo-registro-generator')
+                    </div>
+                @endif
+            @else
+                {{-- Dashboard Tradicional para otros roles --}}
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <main class="lg:col-span-2">
+                        {{-- KPIs de Usuarios (contenido principal) --}}
+                        @livewire('kpis.users-kpis')
+                    </main>
+
+                    <aside class="lg:col-span-1">
+                        {{-- KPIs de Unidades --}}
+                        @livewire('kpis.unidades-kpis')
+                    </aside>
+                </div>
+
+                {{-- Nueva sección para KPIs de Vehículos --}}
+                <div class="mt-8">
+                    @livewire('kpis.vehiculos-kpis')
+                </div>
+
+                {{-- KPIs de imágenes de vehículos --}}
+                <div class="mt-6">
+                    @livewire('kpis.imagenes-vehiculos-kpis')
+                </div>
             @endif
 
     </div>

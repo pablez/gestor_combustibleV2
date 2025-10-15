@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class CodigoRegistro extends Model
 {
@@ -77,7 +78,7 @@ class CodigoRegistro extends Model
     public static function generarCodigo()
     {
         do {
-            $codigo = strtoupper(\Str::random(6) . '-' . rand(100, 999));
+            $codigo = strtoupper(Str::random(6) . '-' . rand(100, 999));
         } while (self::where('codigo', $codigo)->exists());
 
         return $codigo;
