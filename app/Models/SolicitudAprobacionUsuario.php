@@ -78,6 +78,11 @@ class SolicitudAprobacionUsuario extends Model
             'id_usuario_aprobador' => $usuario_aprobador,
             'observaciones_aprobacion' => $observaciones,
         ]);
+
+        // Si es una solicitud de nuevo usuario, activar automáticamente el usuario
+        if ($this->tipo_solicitud === 'nuevo_usuario' && $this->usuario) {
+            $this->usuario->update(['activo' => true]);
+        }
     }
 
     public function rechazar($usuario_aprobador, $observaciones)

@@ -38,6 +38,28 @@ class LoginForm extends Form
             ]);
         }
 
+        // Verificar si el usuario está activo
+        $user = Auth::user();
+        if (!$user->activo) {
+            Auth::logout();
+            
+            // Verificar si tiene solicitud pendiente
+            $solicitudPendiente = \App\Models\SolicitudAprobacionUsuario::where('id_usuario', $user->id)
+                ->where('estado_solicitud', 'pendiente')
+                ->where('tipo_solicitud', 'nuevo_usuario')
+                ->exists();
+            
+            if ($solicitudPendiente) {
+                throw ValidationException::withMessages([
+                    'form.email' => 'Su cuenta está pendiente de aprobación por parte del administrador. Recibirá un correo cuando sea activada.',
+                ]);
+            } else {
+                throw ValidationException::withMessages([
+                    'form.email' => 'Su cuenta ha sido desactivada. Contacte al administrador para más información.',
+                ]);
+            }
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

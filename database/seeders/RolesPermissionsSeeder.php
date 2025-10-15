@@ -67,6 +67,12 @@ class RolesPermissionsSeeder extends Seeder
             P::PRESUPUESTOS_EDITAR,
             P::PRESUPUESTOS_ELIMINAR,
 
+            // Categorías Programáticas
+            P::CATEGORIAS_PROGRAMATICAS_VER,
+            P::CATEGORIAS_PROGRAMATICAS_CREAR,
+            P::CATEGORIAS_PROGRAMATICAS_EDITAR,
+            P::CATEGORIAS_PROGRAMATICAS_ELIMINAR,
+
             // Solicitudes de Aprobación de Usuario
             P::SOLICITUDES_APROBACION_VER,
             P::SOLICITUDES_APROBACION_CREAR,
@@ -95,7 +101,7 @@ class RolesPermissionsSeeder extends Seeder
         $admin = Role::firstOrCreate(['name' => 'Admin_General']);
     $admin->syncPermissions($permissions);
 
-        // Admin_Secretaria: user and unidades management, solicitudes (no aprobaciones), proveedores, despachos, presupuestos, solicitudes_aprobacion, codigos_registro, reportes
+        // Admin_Secretaria: user and unidades management, solicitudes (no aprobaciones), proveedores, despachos, presupuestos, categorias-programaticas, solicitudes_aprobacion, codigos_registro, reportes
         $secretaria = Role::firstOrCreate(['name' => 'Admin_Secretaria']);
         $secretariaPerms = array_filter($permissions, function ($p) {
             return str_starts_with($p, 'usuarios.') || 
@@ -106,6 +112,7 @@ class RolesPermissionsSeeder extends Seeder
                    str_starts_with($p, 'despachos.') ||
                    str_starts_with($p, 'consumos.') ||
                    str_starts_with($p, 'presupuestos.') ||
+                   str_starts_with($p, 'categorias-programaticas.') ||
                    str_starts_with($p, 'solicitudes_aprobacion.') ||
                    str_starts_with($p, 'codigos_registro.') ||
                    str_starts_with($p, 'reportes.');

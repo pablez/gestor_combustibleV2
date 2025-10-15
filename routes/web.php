@@ -52,6 +52,8 @@ use App\Livewire\Solicitud\Edit as SolicitudEdit;
 // Categorías Programáticas
 use App\Livewire\CategoriaProgramatica\Index as CategoriaProgramaticaIndex;
 use App\Livewire\CategoriaProgramatica\Create as CategoriaProgramaticaCreate;
+use App\Livewire\CategoriaProgramatica\Show as CategoriaProgramaticaShow;
+use App\Livewire\CategoriaProgramatica\Edit as CategoriaProgramaticaEdit;
 
 // Fuentes de Organismo Financiero
 use App\Livewire\FuenteOrganismoFinanciero\Index as FuenteOrganismoFinancieroIndex;
@@ -148,6 +150,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('categorias-programaticas')->name('categorias-programaticas.')->group(function () {
         Route::get('/', CategoriaProgramaticaIndex::class)->name('index');
         Route::get('/create', CategoriaProgramaticaCreate::class)->name('create');
+        Route::get('/{categoria}', CategoriaProgramaticaShow::class)->name('show');
+        Route::get('/{categoria}/edit', CategoriaProgramaticaEdit::class)->name('edit');
     });
     
     // === FUENTES DE ORGANISMO FINANCIERO ===

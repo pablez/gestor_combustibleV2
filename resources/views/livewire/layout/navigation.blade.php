@@ -110,7 +110,7 @@
             @endif
 
             {{-- Administración del Sistema --}}
-            @if(auth()->user() && (auth()->user()->hasPermissionTo(\App\Constants\Permissions::SOLICITUDES_APROBACION_VER) || auth()->user()->hasPermissionTo(\App\Constants\Permissions::CODIGOS_REGISTRO_VER) || auth()->user()->hasRole('Admin_General')))
+            @if(auth()->user() && (auth()->user()->hasPermissionTo(\App\Constants\Permissions::PRESUPUESTOS_VER) || auth()->user()->can(\App\Constants\Permissions::CATEGORIAS_PROGRAMATICAS_VER) || auth()->user()->hasPermissionTo(\App\Constants\Permissions::SOLICITUDES_APROBACION_VER) || auth()->user()->hasPermissionTo(\App\Constants\Permissions::CODIGOS_REGISTRO_VER) || auth()->user()->hasRole('Admin_General')))
                 <div x-data="{ open: false }" class="space-y-1">
                     <button @click="open = ! open" 
                             class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
@@ -126,6 +126,18 @@
                         </svg>
                     </button>
                     <div x-show="open" x-transition class="pl-4 space-y-1">
+                        @if(auth()->user()->hasPermissionTo(\App\Constants\Permissions::PRESUPUESTOS_VER) || auth()->user()->hasRole('Admin_General'))
+                            <a href="{{ route('presupuestos.index') }}" wire:navigate
+                               class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('presupuestos*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                                Presupuestos
+                            </a>
+                        @endif
+                        @if(auth()->user()->can(\App\Constants\Permissions::CATEGORIAS_PROGRAMATICAS_VER) || auth()->user()->hasRole('Admin_General'))
+                            <a href="{{ route('categorias-programaticas.index') }}" wire:navigate
+                               class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('categorias-programaticas*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">
+                                Categorías Programáticas
+                            </a>
+                        @endif
                         @if(auth()->user()->hasPermissionTo(\App\Constants\Permissions::SOLICITUDES_APROBACION_VER) || auth()->user()->hasRole('Admin_General'))
                             <a href="{{ route('solicitudes-aprobacion.index') }}" wire:navigate
                                class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 {{ request()->routeIs('solicitudes-aprobacion*') ? 'bg-gray-100 text-indigo-700 dark:bg-gray-700 dark:text-indigo-300' : '' }}">

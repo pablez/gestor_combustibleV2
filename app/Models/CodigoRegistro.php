@@ -18,6 +18,10 @@ class CodigoRegistro extends Model
         'usado',
         'id_usuario_usado',
         'fecha_uso',
+        'id_unidad_organizacional_asignada',
+        'id_supervisor_asignado',
+        'rol_asignado',
+        'observaciones',
     ];
 
     protected $casts = [
@@ -35,6 +39,16 @@ class CodigoRegistro extends Model
     public function usuarioUsado()
     {
         return $this->belongsTo(User::class, 'id_usuario_usado');
+    }
+
+    public function unidadAsignada()
+    {
+        return $this->belongsTo(\App\Models\UnidadOrganizacional::class, 'id_unidad_organizacional_asignada', 'id_unidad_organizacional');
+    }
+
+    public function supervisorAsignado()
+    {
+        return $this->belongsTo(User::class, 'id_supervisor_asignado');
     }
 
     // Scopes
@@ -85,13 +99,52 @@ class CodigoRegistro extends Model
     }
 
     // Crear nuevo código
-    public static function crear($usuario_generador_id, $dias_vigencia = 7)
+    public static function crear($usuario_generador_id, $dias_vigencia = 7, $datos_personalizacion = [])
     {
         return self::create([
             'codigo' => self::generarCodigo(),
             'id_usuario_generador' => $usuario_generador_id,
-            'vigente_hasta' => now()->addDays($dias_vigencia)->toDateString(),
+            'vigente_hasta' => now()->addDays((int) $dias_vigencia)->toDateString(),
             'usado' => false,
+            'id_unidad_organizacional_asignada' => $datos_personalizacion['id_unidad_organizacional'] ?? null,
+            'id_supervisor_asignado' => $datos_personalizacion['id_supervisor'] ?? null,
+            'rol_asignado' => $datos_personalizacion['rol'] ?? null,
+            'observaciones' => $datos_personalizacion['observaciones'] ?? null,
         ]);
+    }
+
+    // Validar código para registro
+    public static function validarParaRegistro($codigo)
+    {
+        $codigoObj = self::where('codigo', $codigo)->first();
+        
+        if (!$codigoObj) {
+            throw new \Exception('El código de registro no existe.');
+        }
+        
+        if (!$codigoObj->estaVigente()) {
+            throw new \Exception('El código de registro ha expirado o ya fue usado.');
+        }
+        
+        return $codigoObj;
+    }
+
+    // Obtener datos de personalización
+    public function getDatosPersonalizacion()
+    {
+        return [
+            'id_unidad_organizacional' => $this->id_unidad_organizacional_asignada,
+            'id_supervisor' => $this->id_supervisor_asignado,
+            'rol' => $this->rol_asignado,
+            'observaciones' => $this->observaciones,
+        ];
+    }
+
+    // Verificar si el código tiene datos de personalización
+    public function tienePersonalizacion()
+    {
+        return $this->id_unidad_organizacional_asignada !== null ||
+               $this->id_supervisor_asignado !== null ||
+               $this->rol_asignado !== null;
     }
 }

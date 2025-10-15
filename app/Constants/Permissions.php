@@ -55,11 +55,18 @@ final class Permissions
     public const PRESUPUESTOS_EDITAR = 'presupuestos.editar';
     public const PRESUPUESTOS_ELIMINAR = 'presupuestos.eliminar';
 
+    // Categorías Programáticas
+    public const CATEGORIAS_PROGRAMATICAS_VER = 'categorias-programaticas.ver';
+    public const CATEGORIAS_PROGRAMATICAS_CREAR = 'categorias-programaticas.crear';
+    public const CATEGORIAS_PROGRAMATICAS_EDITAR = 'categorias-programaticas.editar';
+    public const CATEGORIAS_PROGRAMATICAS_ELIMINAR = 'categorias-programaticas.eliminar';
+
     // Solicitudes de Aprobación de Usuario
     public const SOLICITUDES_APROBACION_VER = 'solicitudes_aprobacion.ver';
     public const SOLICITUDES_APROBACION_CREAR = 'solicitudes_aprobacion.crear';
     public const SOLICITUDES_APROBACION_APROBAR = 'solicitudes_aprobacion.aprobar';
     public const SOLICITUDES_APROBACION_RECHAZAR = 'solicitudes_aprobacion.rechazar';
+    public const SOLICITUDES_APROBACION_PROCESAR = 'solicitudes_aprobacion.procesar';
 
     // Códigos de Registro
     public const CODIGOS_REGISTRO_VER = 'codigos_registro.ver';
