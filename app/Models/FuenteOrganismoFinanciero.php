@@ -18,7 +18,7 @@ class FuenteOrganismoFinanciero extends Model
     /**
      * Clave primaria de la tabla
      */
-    protected $primaryKey = 'id_fuente_org_fin';
+    protected $primaryKey = 'id';
 
     /**
      * Los atributos que son asignables en masa
@@ -131,7 +131,7 @@ class FuenteOrganismoFinanciero extends Model
      */
     public function solicitudesCombustible(): HasMany
     {
-        return $this->hasMany(SolicitudCombustible::class, 'id_fuente_org_fin', 'id_fuente_org_fin');
+        return $this->hasMany(SolicitudCombustible::class, 'id_fuente_org_fin');
     }
 
     /**
@@ -139,7 +139,7 @@ class FuenteOrganismoFinanciero extends Model
      */
     public function presupuestos(): HasMany
     {
-        return $this->hasMany(Presupuesto::class, 'id_fuente_org_fin', 'id_fuente_org_fin');
+        return $this->hasMany(Presupuesto::class, 'id_fuente_org_fin');
     }
 
     /**

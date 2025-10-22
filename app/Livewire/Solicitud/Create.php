@@ -127,6 +127,8 @@ class Create extends Component
             $this->cargarFuenteFinanciera($value);
         } else {
             $this->fuenteSeleccionada = null;
+            $this->presupuestoInfo = null;
+            $this->presupuestoDisponible = 0;
         }
     }
 
@@ -288,156 +290,159 @@ class Create extends Component
     
     protected function cargarInformacionPresupuesto()
     {
-        if (!$this->fuenteSeleccionada || !$this->categoriaSeleccionada) {
-            $this->presupuestoInfo = null;
-            $this->unidadOrganizacionalInfo = null;
-            return;
+        // Reiniciar información anterior
+        $this->presupuestoInfo = null;
+        $this->unidadOrganizacionalInfo = null;
+        $this->presupuestoDisponible = 0;
+        
+        // Si tenemos fuente seleccionada, cargar su información presupuestaria
+        if ($this->fuenteSeleccionada) {
+            $this->cargarPresupuestoPorFuente();
         }
         
+        // Si también tenemos categoría, cargar información combinada
+        if ($this->fuenteSeleccionada && $this->categoriaSeleccionada) {
+            $this->cargarPresupuestoCombinado();
+        }
+    }
+    
+    protected function cargarPresupuestoPorFuente()
+    {
         try {
-            // Obtener ID de fuente y categoría (manejar tanto objetos de BD como fallback)
-            $fuenteId = $this->fuenteSeleccionada->id_fuente_org_fin ?? $this->fuenteSeleccionada->id ?? null;
-            $categoriaId = $this->categoriaSeleccionada->id_cat_programatica ?? $this->categoriaSeleccionada->id ?? null;
+            $fuenteId = $this->fuenteSeleccionada->id ?? null;
             
-            if (!$fuenteId || !$categoriaId) {
-                $this->presupuestoInfo = null;
-                $this->unidadOrganizacionalInfo = null;
-                return;
+            if (!$fuenteId) return;
+            
+            // Consulta optimizada con JOIN múltiples según diagrama-optimizado
+            $presupuestos = Presupuesto::select([
+                'presupuestos.*',
+                'unidades_organizacionales.nombre_unidad',
+                'unidades_organizacionales.codigo_unidad',
+                'unidades_organizacionales.tipo_unidad',
+                'unidades_organizacionales.nivel_jerarquico',
+                'unidades_organizacionales.responsable_unidad',
+                'categoria_programaticas.codigo as categoria_codigo',
+                'categoria_programaticas.descripcion as categoria_descripcion',
+                'categoria_programaticas.nivel as categoria_nivel',
+                'fuente_organismo_financieros.codigo as fuente_codigo',
+                'fuente_organismo_financieros.descripcion as fuente_descripcion'
+            ])
+            ->leftJoin('unidades_organizacionales', 'presupuestos.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
+            ->leftJoin('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id')
+            ->leftJoin('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id')
+            ->where('presupuestos.id_fuente_org_fin', $fuenteId)
+            ->where('presupuestos.activo', true)
+            ->where('presupuestos.anio_fiscal', date('Y'))
+            ->get();
+            
+            if ($presupuestos->isNotEmpty()) {
+                // Calcular totales de la fuente
+                $totalInicial = $presupuestos->sum('presupuesto_inicial');
+                $totalActual = $presupuestos->sum('presupuesto_actual');
+                $totalDisponible = $presupuestos->sum('saldo_disponible');
+                $totalGastado = $presupuestos->sum('total_gastado');
+                $totalComprometido = $presupuestos->sum('total_comprometido');
+                
+                $this->presupuestoDisponible = $totalDisponible;
+                
+                // Calcular porcentaje de ejecución y alerta de límite
+                $porcentajeEjecutado = $totalInicial > 0 ? round(($totalGastado / $totalInicial) * 100, 2) : 0;
+                $alertaPorcentaje = $presupuestos->avg('alerta_porcentaje') ?? 80;
+                $estaCercaLimite = $porcentajeEjecutado >= $alertaPorcentaje;
+                
+                // Crear objeto con información agregada y optimizada según diagrama
+                $this->presupuestoInfo = (object) [
+                    'presupuesto_inicial' => $totalInicial,
+                    'presupuesto_actual' => $totalActual,
+                    'saldo_disponible' => $totalDisponible,
+                    'total_gastado' => $totalGastado,
+                    'total_comprometido' => $totalComprometido,
+                    'porcentaje_ejecutado' => $porcentajeEjecutado,
+                    'cantidad_presupuestos' => $presupuestos->count(),
+                    'categorias' => $presupuestos->pluck('categoria_descripcion')->filter()->unique(),
+                    'anio_fiscal' => date('Y'),
+                    'fuente_codigo' => $presupuestos->first()->fuente_codigo ?? $this->fuenteSeleccionada->codigo,
+                    'fuente_descripcion' => $presupuestos->first()->fuente_descripcion ?? $this->fuenteSeleccionada->descripcion,
+                    'unidades' => $presupuestos->pluck('nombre_unidad')->filter()->unique(),
+                    'esta_cerca_limite' => $estaCercaLimite,
+                    'alerta_porcentaje' => $alertaPorcentaje,
+                    'activo' => $presupuestos->first()->activo ?? true,
+                    'num_documento' => $presupuestos->first()->num_documento ?? null,
+                    'numero_comprobante' => $presupuestos->first()->numero_comprobante ?? null,
+                    'fecha_aprobacion' => $presupuestos->first()->fecha_aprobacion,
+                    'unidades_organizacionales' => $presupuestos->pluck('nombre_unidad', 'id_unidad_organizacional')->filter()->toArray(),
+                ];
             }
             
-            // Consulta con JOIN para obtener toda la información relacionada
-            $presupuestoCompleto = Presupuesto::select([
+        } catch (\Exception $e) {
+            Log::warning('Error cargando presupuesto por fuente: ' . $e->getMessage());
+        }
+    }
+    
+    protected function cargarPresupuestoCombinado()
+    {
+        try {
+            $fuenteId = $this->fuenteSeleccionada->id ?? null;
+            $categoriaId = $this->categoriaSeleccionada->id ?? null;
+            
+            if (!$fuenteId || !$categoriaId) return;
+            
+            // Consulta optimizada según diagrama-optimizado con JOINs eficientes
+            $presupuestoEspecifico = Presupuesto::select([
                 'presupuestos.*',
                 'unidades_organizacionales.codigo_unidad',
                 'unidades_organizacionales.nombre_unidad',
                 'unidades_organizacionales.tipo_unidad',
-                'unidades_organizacionales.nivel_jerarquico',
                 'unidades_organizacionales.responsable_unidad',
                 'unidades_organizacionales.telefono',
                 'unidades_organizacionales.direccion',
-                'unidades_organizacionales.presupuesto_asignado as presupuesto_asignado_unidad',
-                'unidades_organizacionales.descripcion as descripcion_unidad',
-                'unidades_organizacionales.activa as unidad_activa',
+                'unidades_organizacionales.nivel_jerarquico',
+                'unidades_organizacionales.presupuesto_asignado',
                 'categoria_programaticas.codigo as categoria_codigo',
                 'categoria_programaticas.descripcion as categoria_descripcion',
+                'categoria_programaticas.nivel as categoria_nivel',
                 'categoria_programaticas.tipo_categoria',
                 'fuente_organismo_financieros.codigo as fuente_codigo',
                 'fuente_organismo_financieros.descripcion as fuente_descripcion',
-                'fuente_organismo_financieros.tipo_fuente',
-                'fuente_organismo_financieros.organismo_financiador',
-                'fuente_organismo_financieros.requiere_contrapartida',
-                'fuente_organismo_financieros.porcentaje_contrapartida'
+                'fuente_organismo_financieros.organismo_financiador'
             ])
-            ->join('unidades_organizacionales', 'presupuestos.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
-            ->join('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id_cat_programatica')
-            ->join('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id_fuente_org_fin')
+            ->leftJoin('unidades_organizacionales', 'presupuestos.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
+            ->leftJoin('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id')
+            ->leftJoin('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id')
             ->where('presupuestos.id_fuente_org_fin', $fuenteId)
             ->where('presupuestos.id_cat_programatica', $categoriaId)
             ->where('presupuestos.activo', true)
             ->where('presupuestos.anio_fiscal', date('Y'))
-            ->where('unidades_organizacionales.activa', true)
-            ->where('categoria_programaticas.activo', true)
-            ->where('fuente_organismo_financieros.activo', true)
             ->first();
             
-            if ($presupuestoCompleto) {
-                // Crear objeto presupuesto con información extendida
-                $this->presupuestoInfo = $presupuestoCompleto;
+            if ($presupuestoEspecifico) {
+                $this->presupuestoInfo = $presupuestoEspecifico;
+                $this->presupuestoDisponible = $presupuestoEspecifico->saldo_disponible;
                 
-                // Crear objeto unidad organizacional con datos completos
+                // Información completa de la unidad organizacional según el diagrama-optimizado
                 $this->unidadOrganizacionalInfo = (object) [
-                    'id_unidad_organizacional' => $presupuestoCompleto->id_unidad_organizacional,
-                    'codigo_unidad' => $presupuestoCompleto->codigo_unidad,
-                    'nombre_unidad' => $presupuestoCompleto->nombre_unidad,
-                    'tipo_unidad' => $presupuestoCompleto->tipo_unidad,
-                    'nivel_jerarquico' => $presupuestoCompleto->nivel_jerarquico,
-                    'responsable_unidad' => $presupuestoCompleto->responsable_unidad,
-                    'telefono' => $presupuestoCompleto->telefono,
-                    'direccion' => $presupuestoCompleto->direccion,
-                    'presupuesto_asignado' => $presupuestoCompleto->presupuesto_asignado_unidad,
-                    'descripcion' => $presupuestoCompleto->descripcion_unidad,
-                    'activa' => $presupuestoCompleto->unidad_activa,
-                    // Información adicional de la relación
-                    'presupuesto_total_asignado' => $presupuestoCompleto->presupuesto_inicial,
-                    'presupuesto_disponible' => $presupuestoCompleto->saldo_disponible,
-                    'porcentaje_ejecucion' => $presupuestoCompleto->porcentaje_ejecutado,
+                    'id_unidad_organizacional' => $presupuestoEspecifico->id_unidad_organizacional,
+                    'codigo_unidad' => $presupuestoEspecifico->codigo_unidad,
+                    'nombre_unidad' => $presupuestoEspecifico->nombre_unidad,
+                    'tipo_unidad' => $presupuestoEspecifico->tipo_unidad,
+                    'responsable_unidad' => $presupuestoEspecifico->responsable_unidad,
+                    'telefono' => $presupuestoEspecifico->telefono,
+                    'direccion' => $presupuestoEspecifico->direccion,
+                    'nivel_jerarquico' => $presupuestoEspecifico->nivel_jerarquico,
+                    'presupuesto_asignado' => $presupuestoEspecifico->presupuesto_asignado,
+                    'descripcion' => $presupuestoEspecifico->descripcion ?? '',
+                    // Información de categoría programática y fuente de financiamiento
+                    'categoria_codigo' => $presupuestoEspecifico->categoria_codigo,
+                    'categoria_descripcion' => $presupuestoEspecifico->categoria_descripcion,
+                    'categoria_nivel' => $presupuestoEspecifico->categoria_nivel,
+                    'fuente_codigo' => $presupuestoEspecifico->fuente_codigo,
+                    'fuente_descripcion' => $presupuestoEspecifico->fuente_descripcion,
+                    'organismo_financiero' => $presupuestoEspecifico->organismo_financiador,
                 ];
-                
-                // Agregar información de la fuente al objeto presupuesto
-                $this->presupuestoInfo->fuente_info = (object) [
-                    'codigo' => $presupuestoCompleto->fuente_codigo,
-                    'descripcion' => $presupuestoCompleto->fuente_descripcion,
-                    'tipo_fuente' => $presupuestoCompleto->tipo_fuente,
-                    'organismo_financiador' => $presupuestoCompleto->organismo_financiador,
-                    'requiere_contrapartida' => $presupuestoCompleto->requiere_contrapartida,
-                    'porcentaje_contrapartida' => $presupuestoCompleto->porcentaje_contrapartida,
-                ];
-                
-                // Agregar información de la categoría al objeto presupuesto
-                $this->presupuestoInfo->categoria_info = (object) [
-                    'codigo' => $presupuestoCompleto->categoria_codigo,
-                    'descripcion' => $presupuestoCompleto->categoria_descripcion,
-                    'tipo_categoria' => $presupuestoCompleto->tipo_categoria,
-                ];
-                
-            } else {
-                // Si no hay presupuesto específico, intentar obtener información básica
-                $this->obtenerInformacionAlternativa($fuenteId, $categoriaId);
             }
             
         } catch (\Exception $e) {
-            Log::warning('Error cargando información de presupuesto con JOIN: ' . $e->getMessage());
-            $this->presupuestoInfo = null;
-            $this->unidadOrganizacionalInfo = null;
-        }
-    }
-    
-    protected function obtenerInformacionAlternativa($fuenteId, $categoriaId)
-    {
-        try {
-            // Buscar unidad organizacional del usuario actual
-            $usuario = auth()->user();
-            if ($usuario && $usuario->id_unidad_organizacional) {
-                $this->unidadOrganizacionalInfo = UnidadOrganizacional::select([
-                    'id_unidad_organizacional',
-                    'codigo_unidad',
-                    'nombre_unidad',
-                    'tipo_unidad',
-                    'nivel_jerarquico',
-                    'responsable_unidad',
-                    'telefono',
-                    'direccion',
-                    'presupuesto_asignado',
-                    'descripcion',
-                    'activa'
-                ])
-                ->where('id_unidad_organizacional', $usuario->id_unidad_organizacional)
-                ->where('activa', true)
-                ->first();
-            }
-            
-            // Buscar cualquier presupuesto relacionado con la fuente y categoría
-            $presupuestoGeneral = Presupuesto::select([
-                'presupuestos.*',
-                'unidades_organizacionales.nombre_unidad',
-                'categoria_programaticas.codigo as categoria_codigo',
-                'fuente_organismo_financieros.codigo as fuente_codigo'
-            ])
-            ->leftJoin('unidades_organizacionales', 'presupuestos.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
-            ->leftJoin('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id_cat_programatica')
-            ->leftJoin('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id_fuente_org_fin')
-            ->where('presupuestos.id_fuente_org_fin', $fuenteId)
-            ->where('presupuestos.id_cat_programatica', $categoriaId)
-            ->where('presupuestos.activo', true)
-            ->orderBy('presupuestos.anio_fiscal', 'desc')
-            ->first();
-            
-            if ($presupuestoGeneral) {
-                $this->presupuestoInfo = $presupuestoGeneral;
-            }
-            
-        } catch (\Exception $e) {
-            Log::warning('Error obteniendo información alternativa: ' . $e->getMessage());
+            Log::warning('Error cargando presupuesto combinado: ' . $e->getMessage());
         }
     }
 
@@ -509,8 +514,8 @@ class Create extends Component
                 'fuente_organismo_financieros.organismo_financiador'
             ])
             ->leftJoin('unidades_organizacionales', 'presupuestos.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
-            ->leftJoin('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id_cat_programatica')
-            ->leftJoin('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id_fuente_org_fin')
+            ->leftJoin('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id')
+            ->leftJoin('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id')
             ->where('presupuestos.id_cat_programatica', $this->id_cat_programatica)
             ->where('presupuestos.anio_fiscal', date('Y'))
             ->where('presupuestos.activo', true);
@@ -745,12 +750,12 @@ class Create extends Component
                 \DB::raw('SUM(presupuestos.saldo_disponible) as saldo_total')
             ])
             ->leftJoin('presupuestos', function($join) {
-                $join->on('categoria_programaticas.id_cat_programatica', '=', 'presupuestos.id_cat_programatica')
+                $join->on('categoria_programaticas.id', '=', 'presupuestos.id_cat_programatica')
                      ->where('presupuestos.activo', true)
                      ->where('presupuestos.anio_fiscal', date('Y'));
             })
             ->where('categoria_programaticas.activo', true)
-            ->groupBy('categoria_programaticas.id_cat_programatica')
+            ->groupBy('categoria_programaticas.id')
             ->orderBy('categoria_programaticas.codigo')
             ->get();
                 
@@ -762,12 +767,12 @@ class Create extends Component
                 \DB::raw('SUM(presupuestos.saldo_disponible) as saldo_total')
             ])
             ->leftJoin('presupuestos', function($join) {
-                $join->on('fuente_organismo_financieros.id_fuente_org_fin', '=', 'presupuestos.id_fuente_org_fin')
+                $join->on('fuente_organismo_financieros.id', '=', 'presupuestos.id_fuente_org_fin')
                      ->where('presupuestos.activo', true)
                      ->where('presupuestos.anio_fiscal', date('Y'));
             })
             ->where('fuente_organismo_financieros.activo', true)
-            ->groupBy('fuente_organismo_financieros.id_fuente_org_fin')
+            ->groupBy('fuente_organismo_financieros.id')
             ->orderBy('fuente_organismo_financieros.codigo')
             ->get();
             

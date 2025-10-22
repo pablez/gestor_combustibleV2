@@ -704,13 +704,95 @@
                                         <option value="">Selecciona fuente (opcional)</option>
                                         @foreach($fuentesOrganismo as $fuente)
                                             <option value="{{ $fuente->id }}">
-                                                🏦 {{ $fuente->codigo }}
-                                                @if($fuente->descripcion)
-                                                    | {{ $fuente->descripcion }}
+                                                🏦 {{ $fuente->codigo }} - {{ $fuente->descripcion }}
+                                                @if(isset($fuente->total_presupuestos) && $fuente->total_presupuestos > 0)
+                                                    | {{ $fuente->total_presupuestos }} presupuesto(s)
                                                 @endif
                                             </option>
                                         @endforeach
                                     </select>
+                                    
+                                    {{-- Mostrar información de presupuesto de la fuente --}}
+                                    @if($presupuestoInfo && $fuenteSeleccionada)
+                                        <div class="mt-2 bg-emerald-50 border border-emerald-200 rounded p-3">
+                                            <div class="text-sm text-emerald-800">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <span class="font-medium">💰 Presupuesto de la Fuente:</span>
+                                                    <span class="text-xs bg-emerald-200 px-2 py-1 rounded">{{ $presupuestoInfo->anio_fiscal ?? date('Y') }}</span>
+                                                </div>
+                                                
+                                                @if(isset($presupuestoInfo->cantidad_presupuestos))
+                                                    <div class="grid grid-cols-2 gap-3 text-xs">
+                                                        <div>
+                                                            <span class="text-emerald-600">Total Inicial:</span>
+                                                            <span class="font-bold">Bs. {{ number_format($presupuestoInfo->presupuesto_inicial, 2) }}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-emerald-600">Disponible:</span>
+                                                            <span class="font-bold">Bs. {{ number_format($presupuestoInfo->saldo_disponible, 2) }}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-emerald-600">Ejecutado:</span>
+                                                            <span class="font-bold">{{ $presupuestoInfo->porcentaje_ejecutado }}%</span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-emerald-600">Presupuestos:</span>
+                                                            <span class="font-bold">{{ $presupuestoInfo->cantidad_presupuestos }}</span>
+                                                        </div>
+                                                        
+                                                        @if(isset($presupuestoInfo->total_comprometido) && $presupuestoInfo->total_comprometido > 0)
+                                                        <div>
+                                                            <span class="text-emerald-600">Comprometido:</span>
+                                                            <span class="font-bold">Bs. {{ number_format($presupuestoInfo->total_comprometido, 2) }}</span>
+                                                        </div>
+                                                        @endif
+                                                        
+                                                        @if(isset($presupuestoInfo->organismo_financiador))
+                                                        <div>
+                                                            <span class="text-emerald-600">Organismo:</span>
+                                                            <span class="font-bold">{{ $presupuestoInfo->organismo_financiador }}</span>
+                                                        </div>
+                                                        @endif
+                                                    </div>
+                                                @else
+                                                    <div class="grid grid-cols-2 gap-3 text-xs">
+                                                        <div>
+                                                            <span class="text-emerald-600">Disponible:</span>
+                                                            <span class="font-bold">Bs. {{ number_format($presupuestoInfo->saldo_disponible ?? 0, 2) }}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-emerald-600">Estado:</span>
+                                                            <span class="font-bold">{{ $presupuestoInfo->activo ? 'Activo' : 'Inactivo' }}</span>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                                
+                                                @if(isset($presupuestoInfo->esta_cerca_limite) && $presupuestoInfo->esta_cerca_limite)
+                                                    <div class="mt-2 bg-red-50 border border-red-200 rounded p-2 flex items-center">
+                                                        <svg class="w-4 h-4 text-red-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                                        </svg>
+                                                        <span class="text-xs text-red-700">
+                                                            Presupuesto cerca del límite ({{ $presupuestoInfo->alerta_porcentaje }}% ejecutado)
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                                
+                                                @if($costoEstimado > 0)
+                                                    <div class="mt-2 pt-2 border-t border-emerald-200">
+                                                        <span class="text-emerald-600">Costo estimado:</span>
+                                                        <span class="font-bold">Bs. {{ number_format($costoEstimado, 2) }}</span>
+                                                        @if($presupuestoDisponible > 0)
+                                                            @php $porcentaje = ($costoEstimado / $presupuestoDisponible) * 100; @endphp
+                                                            <span class="text-xs {{ $porcentaje > 80 ? 'text-red-600' : 'text-emerald-600' }}">
+                                                                ({{ number_format($porcentaje, 1) }}% del disponible)
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
 
@@ -981,99 +1063,6 @@
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                    @endif
-                                                    
-                                                    {{-- Información adicional del presupuesto --}}
-                                                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                                        <div>
-                                                            <span class="text-amber-700">📄 Documento:</span>
-                                                            <span class="font-semibold text-amber-900">{{ $presupuestoInfo->num_documento }}</span>
-                                                        </div>
-                                                        @if($presupuestoInfo->numero_comprobante)
-                                                        <div>
-                                                            <span class="text-amber-700">🧾 Comprobante:</span>
-                                                            <span class="font-semibold text-amber-900">{{ $presupuestoInfo->numero_comprobante }}</span>
-                                                        </div>
-                                                        @endif
-                                                        <div>
-                                                            <span class="text-amber-700">📅 Año Fiscal:</span>
-                                                            <span class="font-semibold text-amber-900">{{ $presupuestoInfo->anio_fiscal }}</span>
-                                                        </div>
-                                                        @if($presupuestoInfo->fecha_aprobacion)
-                                                        <div>
-                                                            <span class="text-amber-700">✅ Aprobado:</span>
-                                                            <span class="font-semibold text-amber-900">{{ $presupuestoInfo->fecha_aprobacion->format('d/m/Y') }}</span>
-                                                        </div>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            @endif
-                                            
-                                            {{-- Información de la unidad organizacional --}}
-                                            @if($unidadOrganizacionalInfo)
-                                                <div class="mt-4 bg-gradient-to-r from-indigo-50 to-blue-100 border border-indigo-200 rounded-lg p-4">
-                                                    <div class="text-xs text-indigo-600 font-medium uppercase mb-2">🏢 Unidad Organizacional</div>
-                                                    
-                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div class="bg-white rounded-lg p-3 border border-indigo-100">
-                                                            <div class="text-xs text-indigo-600 font-medium uppercase mb-1">Código</div>
-                                                            <div class="text-indigo-900 font-bold text-lg">{{ $unidadOrganizacionalInfo->codigo_unidad }}</div>
-                                                        </div>
-                                                        
-                                                        <div class="bg-white rounded-lg p-3 border border-indigo-100">
-                                                            <div class="text-xs text-indigo-600 font-medium uppercase mb-1">Tipo</div>
-                                                            <div class="text-indigo-900 font-semibold">{{ $unidadOrganizacionalInfo->tipo_unidad }}</div>
-                                                        </div>
-                                                        
-                                                        <div class="bg-white rounded-lg p-3 border border-indigo-100 md:col-span-2">
-                                                            <div class="text-xs text-indigo-600 font-medium uppercase mb-1">Nombre de la Unidad</div>
-                                                            <div class="text-indigo-900 font-semibold">{{ $unidadOrganizacionalInfo->nombre_unidad }}</div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {{-- Información adicional de la unidad --}}
-                                                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                                        @if($unidadOrganizacionalInfo->responsable_unidad)
-                                                        <div>
-                                                            <span class="text-indigo-700">👤 Responsable:</span>
-                                                            <span class="font-semibold text-indigo-900">{{ $unidadOrganizacionalInfo->responsable_unidad }}</span>
-                                                        </div>
-                                                        @endif
-                                                        
-                                                        @if($unidadOrganizacionalInfo->telefono)
-                                                        <div>
-                                                            <span class="text-indigo-700">📞 Teléfono:</span>
-                                                            <span class="font-semibold text-indigo-900">{{ $unidadOrganizacionalInfo->telefono }}</span>
-                                                        </div>
-                                                        @endif
-                                                        
-                                                        @if($unidadOrganizacionalInfo->nivel_jerarquico)
-                                                        <div>
-                                                            <span class="text-indigo-700">📊 Nivel Jerárquico:</span>
-                                                            <span class="font-semibold text-indigo-900">Nivel {{ $unidadOrganizacionalInfo->nivel_jerarquico }}</span>
-                                                        </div>
-                                                        @endif
-                                                        
-                                                        @if($unidadOrganizacionalInfo->presupuesto_asignado > 0)
-                                                        <div>
-                                                            <span class="text-indigo-700">💰 Presupuesto Asignado:</span>
-                                                            <span class="font-semibold text-indigo-900">Bs. {{ number_format($unidadOrganizacionalInfo->presupuesto_asignado, 2) }}</span>
-                                                        </div>
-                                                        @endif
-                                                    </div>
-                                                    
-                                                    @if($unidadOrganizacionalInfo->direccion)
-                                                    <div class="mt-3 bg-white border border-indigo-100 rounded-lg p-3">
-                                                        <div class="text-xs text-indigo-600 font-medium uppercase mb-1">📍 Dirección</div>
-                                                        <div class="text-indigo-900 text-sm">{{ $unidadOrganizacionalInfo->direccion }}</div>
-                                                    </div>
-                                                    @endif
-                                                    
-                                                    @if($unidadOrganizacionalInfo->descripcion)
-                                                    <div class="mt-3 bg-white border border-indigo-100 rounded-lg p-3">
-                                                        <div class="text-xs text-indigo-600 font-medium uppercase mb-1">📝 Descripción</div>
-                                                        <div class="text-indigo-900 text-sm">{{ $unidadOrganizacionalInfo->descripcion }}</div>
-                                                    </div>
                                                     @endif
                                                 </div>
                                             @endif
