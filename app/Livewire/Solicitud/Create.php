@@ -6,6 +6,11 @@ use App\Models\SolicitudCombustible;
 use App\Models\UnidadTransporte;
 use App\Models\CategoriaProgramatica;
 use App\Models\FuenteOrganismoFinanciero;
+use App\Models\Presupuesto;
+use App\Models\UnidadOrganizacional;
+use App\Models\ConsumoCombustible;
+use App\Services\NotificacionSolicitudService;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class Create extends Component
@@ -26,6 +31,19 @@ class Create extends Component
     // Control de modal/formulario
     public $mostrarFormulario = false;
 
+    // Propiedades calculadas automáticamente
+    public $unidadSeleccionada = null;
+    public $categoriaSeleccionada = null;
+    public $fuenteSeleccionada = null;
+    public $presupuestoInfo = null;
+    public $unidadOrganizacionalInfo = null;
+    public $capacidadTanque = 0;
+    public $rendimientoPromedio = 0;
+    public $consumoEstimado = 0;
+    public $presupuestoDisponible = 0;
+    public $costoEstimado = 0;
+    public $alertas = [];
+
     protected $rules = [
         'id_unidad_transporte' => 'required|exists:unidad_transportes,id',
         'cantidad_litros_solicitados' => 'required|numeric|min:0.01|max:9999.99',
@@ -37,7 +55,7 @@ class Create extends Component
         'saldo_actual_combustible' => 'nullable|numeric|min:0',
         'km_actual' => 'nullable|integer|min:0',
         'km_proyectado' => 'nullable|integer|min:0',
-        'rendimiento_estimado' => 'nullable|numeric|min:0',
+        'rendimiento_estimado' => 'nullable|numeric|min:0.1|max:50',
     ];
 
     protected $messages = [
@@ -51,6 +69,517 @@ class Create extends Component
         'motivo.max' => 'El motivo no puede exceder 500 caracteres.',
         'justificacion_urgencia.max' => 'La justificación no puede exceder 500 caracteres.',
     ];
+
+    public function mount()
+    {
+        // Inicializar variables
+        $this->alertas = [];
+        $this->categoriaSeleccionada = null;
+        $this->fuenteSeleccionada = null;
+        $this->unidadSeleccionada = null;
+    }
+
+    // Listeners para cambios en tiempo real
+    public function updatedIdUnidadTransporte($value)
+    {
+        if ($value) {
+            $this->cargarDatosUnidad($value);
+            $this->validarCapacidadTanque();
+        }
+    }
+
+    public function updatedCantidadLitrosSolicitados($value)
+    {
+        if ($value && $this->id_unidad_transporte) {
+            $this->validarCapacidadTanque();
+            $this->calcularConsumoEstimado();
+            $this->validarPresupuesto();
+        }
+    }
+
+    public function updatedKmProyectado($value)
+    {
+        if ($value && $this->rendimiento_estimado > 0) {
+            $this->calcularConsumoEstimado();
+        }
+    }
+
+    public function updatedRendimientoEstimado($value)
+    {
+        if ($value && $this->km_proyectado > 0) {
+            $this->calcularConsumoEstimado();
+        }
+    }
+
+    public function updatedIdCatProgramatica($value)
+    {
+        if ($value) {
+            $this->cargarCategoriaProgramatica($value);
+            $this->validarPresupuesto();
+        } else {
+            $this->categoriaSeleccionada = null;
+        }
+    }
+
+    public function updatedIdFuenteOrgFin($value)
+    {
+        if ($value) {
+            $this->cargarFuenteFinanciera($value);
+        } else {
+            $this->fuenteSeleccionada = null;
+        }
+    }
+
+    protected function cargarDatosUnidad($unidadId)
+    {
+        $this->unidadSeleccionada = UnidadTransporte::with([
+            'tipoVehiculo', 
+            'tipoCombustible',
+            'unidadOrganizacional',
+            'conductorAsignado'
+        ])->find($unidadId);
+        
+        if ($this->unidadSeleccionada) {
+            $this->capacidadTanque = $this->unidadSeleccionada->capacidad_tanque ?? 0;
+            $this->km_actual = $this->unidadSeleccionada->kilometraje_actual ?? 0;
+            
+            // Obtener rendimiento promedio de los últimos 5 consumos
+            try {
+                $this->rendimientoPromedio = ConsumoCombustible::where('id_unidad_transporte', $unidadId)
+                    ->whereNotNull('rendimiento')
+                    ->where('rendimiento', '>', 0)
+                    ->latest()
+                    ->limit(5)
+                    ->avg('rendimiento') ?? 0;
+            } catch (\Exception $e) {
+                $this->rendimientoPromedio = $this->unidadSeleccionada->tipoVehiculo->consumo_promedio_ciudad ?? 0;
+            }
+            
+            if ($this->rendimientoPromedio > 0 && !$this->rendimiento_estimado) {
+                $this->rendimiento_estimado = round($this->rendimientoPromedio, 2);
+            }
+
+            // Calcular información adicional
+            $this->calcularInformacionAdicional();
+        }
+    }
+
+    protected function calcularInformacionAdicional()
+    {
+        if (!$this->unidadSeleccionada) return;
+
+        // Verificar estado del vehículo
+        $this->verificarEstadoVehiculo();
+        
+        // Calcular autonomía estimada
+        if ($this->capacidadTanque > 0 && $this->rendimientoPromedio > 0) {
+            $autonomiaEstimada = $this->capacidadTanque * $this->rendimientoPromedio;
+        }
+    }
+
+    protected function verificarEstadoVehiculo()
+    {
+        if (!$this->unidadSeleccionada) return;
+
+        $alertas = [];
+
+        // Verificar estado operativo
+        if ($this->unidadSeleccionada->estado_operativo !== 'Operativo') {
+            $alertas[] = [
+                'tipo' => 'estado_vehiculo',
+                'nivel' => 'warning',
+                'mensaje' => "El vehículo está en estado: {$this->unidadSeleccionada->estado_operativo}"
+            ];
+        }
+
+        // Verificar documentos vencidos
+        if ($this->unidadSeleccionada->seguro_vigente_hasta && $this->unidadSeleccionada->seguro_vigente_hasta < now()) {
+            $alertas[] = [
+                'tipo' => 'seguro_vencido',
+                'nivel' => 'error',
+                'mensaje' => "El seguro del vehículo está vencido desde {$this->unidadSeleccionada->seguro_vigente_hasta->format('d/m/Y')}"
+            ];
+        }
+
+        if ($this->unidadSeleccionada->revision_tecnica_hasta && $this->unidadSeleccionada->revision_tecnica_hasta < now()) {
+            $alertas[] = [
+                'tipo' => 'revision_vencida',
+                'nivel' => 'error',
+                'mensaje' => "La revisión técnica está vencida desde {$this->unidadSeleccionada->revision_tecnica_hasta->format('d/m/Y')}"
+            ];
+        }
+
+        // Verificar mantenimiento
+        if ($this->unidadSeleccionada->proximo_mantenimiento_km && 
+            $this->unidadSeleccionada->kilometraje_actual >= $this->unidadSeleccionada->proximo_mantenimiento_km) {
+            $alertas[] = [
+                'tipo' => 'mantenimiento_requerido',
+                'nivel' => 'warning',
+                'mensaje' => "El vehículo requiere mantenimiento (actual: {$this->unidadSeleccionada->kilometraje_actual} km)"
+            ];
+        }
+
+        $this->alertas = array_merge($this->alertas, $alertas);
+    }
+
+    protected function cargarCategoriaProgramatica($categoriaId)
+    {
+        try {
+            $this->categoriaSeleccionada = CategoriaProgramatica::find($categoriaId);
+            if (!$this->categoriaSeleccionada) {
+                // Datos de fallback para desarrollo/pruebas
+                $this->categoriaSeleccionada = (object) [
+                    'id' => $categoriaId,
+                    'codigo' => 'CAT-' . str_pad($categoriaId, 3, '0', STR_PAD_LEFT),
+                    'descripcion' => 'Categoría Programática ' . $categoriaId,
+                    'tipo_categoria' => 'Operativa',
+                    'nivel' => 3,
+                    'activo' => true,
+                    'fecha_inicio' => now()->startOfYear(),
+                    'fecha_fin' => now()->endOfYear(),
+                ];
+            }
+            
+            // Cargar información de presupuesto si también tenemos fuente seleccionada
+            $this->cargarInformacionPresupuesto();
+            
+        } catch (\Exception $e) {
+            $this->categoriaSeleccionada = (object) [
+                'id' => $categoriaId,
+                'codigo' => 'CAT-' . str_pad($categoriaId, 3, '0', STR_PAD_LEFT),
+                'descripcion' => 'Categoría Programática ' . $categoriaId,
+                'tipo_categoria' => 'Operativa',
+                'nivel' => 3,
+                'activo' => true,
+                'fecha_inicio' => null,
+                'fecha_fin' => null,
+            ];
+            Log::warning('Error cargando categoría programática, usando datos de fallback: ' . $e->getMessage());
+        }
+    }
+
+    protected function cargarFuenteFinanciera($fuenteId)
+    {
+        try {
+            $this->fuenteSeleccionada = FuenteOrganismoFinanciero::find($fuenteId);
+            if (!$this->fuenteSeleccionada) {
+                // Datos de fallback para desarrollo/pruebas
+                $this->fuenteSeleccionada = (object) [
+                    'id' => $fuenteId,
+                    'codigo' => 'FF-' . str_pad($fuenteId, 3, '0', STR_PAD_LEFT),
+                    'descripcion' => 'Fuente de Financiamiento ' . $fuenteId,
+                    'activo' => true,
+                ];
+            }
+            
+            // Cargar información adicional de presupuesto y unidad organizacional
+            $this->cargarInformacionPresupuesto();
+            
+        } catch (\Exception $e) {
+            $this->fuenteSeleccionada = (object) [
+                'id' => $fuenteId,
+                'codigo' => 'FF-' . str_pad($fuenteId, 3, '0', STR_PAD_LEFT),
+                'descripcion' => 'Fuente de Financiamiento ' . $fuenteId,
+                'activo' => true,
+            ];
+            Log::warning('Error cargando fuente financiera, usando datos de fallback: ' . $e->getMessage());
+        }
+    }
+    
+    protected function cargarInformacionPresupuesto()
+    {
+        if (!$this->fuenteSeleccionada || !$this->categoriaSeleccionada) {
+            $this->presupuestoInfo = null;
+            $this->unidadOrganizacionalInfo = null;
+            return;
+        }
+        
+        try {
+            // Obtener ID de fuente y categoría (manejar tanto objetos de BD como fallback)
+            $fuenteId = $this->fuenteSeleccionada->id_fuente_org_fin ?? $this->fuenteSeleccionada->id ?? null;
+            $categoriaId = $this->categoriaSeleccionada->id_cat_programatica ?? $this->categoriaSeleccionada->id ?? null;
+            
+            if (!$fuenteId || !$categoriaId) {
+                $this->presupuestoInfo = null;
+                $this->unidadOrganizacionalInfo = null;
+                return;
+            }
+            
+            // Consulta con JOIN para obtener toda la información relacionada
+            $presupuestoCompleto = Presupuesto::select([
+                'presupuestos.*',
+                'unidades_organizacionales.codigo_unidad',
+                'unidades_organizacionales.nombre_unidad',
+                'unidades_organizacionales.tipo_unidad',
+                'unidades_organizacionales.nivel_jerarquico',
+                'unidades_organizacionales.responsable_unidad',
+                'unidades_organizacionales.telefono',
+                'unidades_organizacionales.direccion',
+                'unidades_organizacionales.presupuesto_asignado as presupuesto_asignado_unidad',
+                'unidades_organizacionales.descripcion as descripcion_unidad',
+                'unidades_organizacionales.activa as unidad_activa',
+                'categoria_programaticas.codigo as categoria_codigo',
+                'categoria_programaticas.descripcion as categoria_descripcion',
+                'categoria_programaticas.tipo_categoria',
+                'fuente_organismo_financieros.codigo as fuente_codigo',
+                'fuente_organismo_financieros.descripcion as fuente_descripcion',
+                'fuente_organismo_financieros.tipo_fuente',
+                'fuente_organismo_financieros.organismo_financiador',
+                'fuente_organismo_financieros.requiere_contrapartida',
+                'fuente_organismo_financieros.porcentaje_contrapartida'
+            ])
+            ->join('unidades_organizacionales', 'presupuestos.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
+            ->join('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id_cat_programatica')
+            ->join('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id_fuente_org_fin')
+            ->where('presupuestos.id_fuente_org_fin', $fuenteId)
+            ->where('presupuestos.id_cat_programatica', $categoriaId)
+            ->where('presupuestos.activo', true)
+            ->where('presupuestos.anio_fiscal', date('Y'))
+            ->where('unidades_organizacionales.activa', true)
+            ->where('categoria_programaticas.activo', true)
+            ->where('fuente_organismo_financieros.activo', true)
+            ->first();
+            
+            if ($presupuestoCompleto) {
+                // Crear objeto presupuesto con información extendida
+                $this->presupuestoInfo = $presupuestoCompleto;
+                
+                // Crear objeto unidad organizacional con datos completos
+                $this->unidadOrganizacionalInfo = (object) [
+                    'id_unidad_organizacional' => $presupuestoCompleto->id_unidad_organizacional,
+                    'codigo_unidad' => $presupuestoCompleto->codigo_unidad,
+                    'nombre_unidad' => $presupuestoCompleto->nombre_unidad,
+                    'tipo_unidad' => $presupuestoCompleto->tipo_unidad,
+                    'nivel_jerarquico' => $presupuestoCompleto->nivel_jerarquico,
+                    'responsable_unidad' => $presupuestoCompleto->responsable_unidad,
+                    'telefono' => $presupuestoCompleto->telefono,
+                    'direccion' => $presupuestoCompleto->direccion,
+                    'presupuesto_asignado' => $presupuestoCompleto->presupuesto_asignado_unidad,
+                    'descripcion' => $presupuestoCompleto->descripcion_unidad,
+                    'activa' => $presupuestoCompleto->unidad_activa,
+                    // Información adicional de la relación
+                    'presupuesto_total_asignado' => $presupuestoCompleto->presupuesto_inicial,
+                    'presupuesto_disponible' => $presupuestoCompleto->saldo_disponible,
+                    'porcentaje_ejecucion' => $presupuestoCompleto->porcentaje_ejecutado,
+                ];
+                
+                // Agregar información de la fuente al objeto presupuesto
+                $this->presupuestoInfo->fuente_info = (object) [
+                    'codigo' => $presupuestoCompleto->fuente_codigo,
+                    'descripcion' => $presupuestoCompleto->fuente_descripcion,
+                    'tipo_fuente' => $presupuestoCompleto->tipo_fuente,
+                    'organismo_financiador' => $presupuestoCompleto->organismo_financiador,
+                    'requiere_contrapartida' => $presupuestoCompleto->requiere_contrapartida,
+                    'porcentaje_contrapartida' => $presupuestoCompleto->porcentaje_contrapartida,
+                ];
+                
+                // Agregar información de la categoría al objeto presupuesto
+                $this->presupuestoInfo->categoria_info = (object) [
+                    'codigo' => $presupuestoCompleto->categoria_codigo,
+                    'descripcion' => $presupuestoCompleto->categoria_descripcion,
+                    'tipo_categoria' => $presupuestoCompleto->tipo_categoria,
+                ];
+                
+            } else {
+                // Si no hay presupuesto específico, intentar obtener información básica
+                $this->obtenerInformacionAlternativa($fuenteId, $categoriaId);
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning('Error cargando información de presupuesto con JOIN: ' . $e->getMessage());
+            $this->presupuestoInfo = null;
+            $this->unidadOrganizacionalInfo = null;
+        }
+    }
+    
+    protected function obtenerInformacionAlternativa($fuenteId, $categoriaId)
+    {
+        try {
+            // Buscar unidad organizacional del usuario actual
+            $usuario = auth()->user();
+            if ($usuario && $usuario->id_unidad_organizacional) {
+                $this->unidadOrganizacionalInfo = UnidadOrganizacional::select([
+                    'id_unidad_organizacional',
+                    'codigo_unidad',
+                    'nombre_unidad',
+                    'tipo_unidad',
+                    'nivel_jerarquico',
+                    'responsable_unidad',
+                    'telefono',
+                    'direccion',
+                    'presupuesto_asignado',
+                    'descripcion',
+                    'activa'
+                ])
+                ->where('id_unidad_organizacional', $usuario->id_unidad_organizacional)
+                ->where('activa', true)
+                ->first();
+            }
+            
+            // Buscar cualquier presupuesto relacionado con la fuente y categoría
+            $presupuestoGeneral = Presupuesto::select([
+                'presupuestos.*',
+                'unidades_organizacionales.nombre_unidad',
+                'categoria_programaticas.codigo as categoria_codigo',
+                'fuente_organismo_financieros.codigo as fuente_codigo'
+            ])
+            ->leftJoin('unidades_organizacionales', 'presupuestos.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
+            ->leftJoin('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id_cat_programatica')
+            ->leftJoin('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id_fuente_org_fin')
+            ->where('presupuestos.id_fuente_org_fin', $fuenteId)
+            ->where('presupuestos.id_cat_programatica', $categoriaId)
+            ->where('presupuestos.activo', true)
+            ->orderBy('presupuestos.anio_fiscal', 'desc')
+            ->first();
+            
+            if ($presupuestoGeneral) {
+                $this->presupuestoInfo = $presupuestoGeneral;
+            }
+            
+        } catch (\Exception $e) {
+            Log::warning('Error obteniendo información alternativa: ' . $e->getMessage());
+        }
+    }
+
+    protected function validarCapacidadTanque()
+    {
+        $this->alertas = array_filter($this->alertas, function($alerta) {
+            return $alerta['tipo'] !== 'capacidad';
+        });
+
+        if ($this->cantidad_litros_solicitados && $this->capacidadTanque > 0) {
+            if ($this->cantidad_litros_solicitados > $this->capacidadTanque) {
+                $this->alertas[] = [
+                    'tipo' => 'capacidad',
+                    'nivel' => 'error',
+                    'mensaje' => "La cantidad solicitada ({$this->cantidad_litros_solicitados}L) excede la capacidad del tanque ({$this->capacidadTanque}L)"
+                ];
+            } elseif ($this->cantidad_litros_solicitados > ($this->capacidadTanque * 0.9)) {
+                $this->alertas[] = [
+                    'tipo' => 'capacidad',
+                    'nivel' => 'warning',
+                    'mensaje' => "La cantidad solicitada está cerca del límite de capacidad del tanque"
+                ];
+            }
+        }
+    }
+
+    protected function calcularConsumoEstimado()
+    {
+        if ($this->km_proyectado > 0 && $this->rendimiento_estimado > 0) {
+            $this->consumoEstimado = round($this->km_proyectado / $this->rendimiento_estimado, 2);
+            
+            // Alerta si la cantidad solicitada difiere mucho del consumo estimado
+            if ($this->cantidad_litros_solicitados > 0) {
+                $diferencia = abs($this->cantidad_litros_solicitados - $this->consumoEstimado);
+                $porcentajeDiferencia = ($diferencia / $this->consumoEstimado) * 100;
+                
+                $this->alertas = array_filter($this->alertas, function($alerta) {
+                    return $alerta['tipo'] !== 'consumo';
+                });
+                
+                if ($porcentajeDiferencia > 30) {
+                    $this->alertas[] = [
+                        'tipo' => 'consumo',
+                        'nivel' => 'warning',
+                        'mensaje' => "La cantidad solicitada ({$this->cantidad_litros_solicitados}L) difiere significativamente del consumo estimado ({$this->consumoEstimado}L)"
+                    ];
+                }
+            }
+        }
+    }
+
+    protected function validarPresupuesto()
+    {
+        $this->alertas = array_filter($this->alertas, function($alerta) {
+            return $alerta['tipo'] !== 'presupuesto';
+        });
+
+        if ($this->id_cat_programatica && $this->cantidad_litros_solicitados > 0) {
+            // Usar JOIN para obtener información completa del presupuesto con fuente y categoría
+            $presupuestoCompleto = Presupuesto::select([
+                'presupuestos.*',
+                'unidades_organizacionales.nombre_unidad',
+                'unidades_organizacionales.codigo_unidad',
+                'categoria_programaticas.codigo as categoria_codigo',
+                'categoria_programaticas.descripcion as categoria_descripcion',
+                'fuente_organismo_financieros.codigo as fuente_codigo',
+                'fuente_organismo_financieros.descripcion as fuente_descripcion',
+                'fuente_organismo_financieros.tipo_fuente',
+                'fuente_organismo_financieros.organismo_financiador'
+            ])
+            ->leftJoin('unidades_organizacionales', 'presupuestos.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
+            ->leftJoin('categoria_programaticas', 'presupuestos.id_cat_programatica', '=', 'categoria_programaticas.id_cat_programatica')
+            ->leftJoin('fuente_organismo_financieros', 'presupuestos.id_fuente_org_fin', '=', 'fuente_organismo_financieros.id_fuente_org_fin')
+            ->where('presupuestos.id_cat_programatica', $this->id_cat_programatica)
+            ->where('presupuestos.anio_fiscal', date('Y'))
+            ->where('presupuestos.activo', true);
+            
+            // Si también tenemos fuente seleccionada, filtrar por ella
+            if ($this->id_fuente_org_fin) {
+                $presupuestoCompleto = $presupuestoCompleto->where('presupuestos.id_fuente_org_fin', $this->id_fuente_org_fin);
+            }
+            
+            $presupuesto = $presupuestoCompleto->first();
+            
+            if ($presupuesto) {
+                $this->presupuestoDisponible = $presupuesto->saldo_disponible;
+                
+                // Estimar costo usando precio por tipo de combustible si está disponible
+                $precioPorLitro = $this->obtenerPrecioCombustible();
+                $this->costoEstimado = $this->cantidad_litros_solicitados * $precioPorLitro;
+                
+                // Validaciones con información detallada
+                if ($this->costoEstimado > $this->presupuestoDisponible) {
+                    $this->alertas[] = [
+                        'tipo' => 'presupuesto',
+                        'nivel' => 'error',
+                        'mensaje' => "El costo estimado (Bs. " . number_format($this->costoEstimado, 2) . ") excede el presupuesto disponible (Bs. " . number_format($this->presupuestoDisponible, 2) . ") " .
+                                   "para " . ($presupuesto->categoria_descripcion ?? 'la categoría seleccionada') . 
+                                   " - " . ($presupuesto->nombre_unidad ?? 'Unidad no especificada')
+                    ];
+                } elseif ($this->costoEstimado > ($this->presupuestoDisponible * 0.8)) {
+                    $porcentajeUso = round(($this->costoEstimado / $this->presupuestoDisponible) * 100, 1);
+                    $this->alertas[] = [
+                        'tipo' => 'presupuesto',
+                        'nivel' => 'warning',
+                        'mensaje' => "El costo estimado usará el {$porcentajeUso}% del presupuesto disponible " .
+                                   "para " . ($presupuesto->categoria_descripcion ?? 'la categoría seleccionada') .
+                                   " (" . ($presupuesto->fuente_descripcion ?? 'fuente no especificada') . ")"
+                    ];
+                }
+                
+                // Alerta adicional si el presupuesto está cerca del límite
+                if ($presupuesto->esta_cerca_limite ?? false) {
+                    $this->alertas[] = [
+                        'tipo' => 'presupuesto',
+                        'nivel' => 'warning',
+                        'mensaje' => "El presupuesto de " . ($presupuesto->categoria_descripcion ?? 'esta categoría') . 
+                                   " está cerca del límite de ejecución (" . ($presupuesto->alerta_porcentaje ?? 80) . "%)"
+                    ];
+                }
+                
+            } else {
+                // No se encontró presupuesto para la combinación
+                $this->alertas[] = [
+                    'tipo' => 'presupuesto',
+                    'nivel' => 'warning',
+                    'mensaje' => "No se encontró presupuesto activo para la categoría y fuente seleccionadas en el año " . date('Y')
+                ];
+            }
+        }
+    }
+    
+    protected function obtenerPrecioCombustible()
+    {
+        // Intentar obtener precio del tipo de combustible del vehículo seleccionado
+        if ($this->unidadSeleccionada && isset($this->unidadSeleccionada->tipoCombustible)) {
+            return $this->unidadSeleccionada->tipoCombustible->precio_referencial ?? 3.74;
+        }
+        
+        // Precio por defecto
+        return 3.74;
+    }
 
     public function toggleFormulario()
     {
@@ -74,13 +603,32 @@ class Create extends Component
             'saldo_actual_combustible',
             'km_actual',
             'km_proyectado',
-            'rendimiento_estimado'
+            'rendimiento_estimado',
+            'unidadSeleccionada',
+            'categoriaSeleccionada',
+            'fuenteSeleccionada',
+            'capacidadTanque',
+            'rendimientoPromedio',
+            'consumoEstimado',
+            'presupuestoDisponible',
+            'costoEstimado',
+            'alertas'
         ]);
         $this->resetValidation();
     }
 
     public function crear()
     {
+        // Validar que no haya errores críticos
+        $erroresCriticos = array_filter($this->alertas, function($alerta) {
+            return $alerta['nivel'] === 'error';
+        });
+
+        if (!empty($erroresCriticos)) {
+            session()->flash('error', 'No se puede crear la solicitud. Hay errores que deben ser corregidos.');
+            return;
+        }
+
         $this->validate();
 
         try {
@@ -90,7 +638,8 @@ class Create extends Component
                 $numeroSolicitud = 'SOL-' . rand(10000, 99999);
             }
 
-            SolicitudCombustible::create([
+            // Crear la solicitud
+            $solicitud = SolicitudCombustible::create([
                 'numero_solicitud' => $numeroSolicitud,
                 'id_usuario_solicitante' => auth()->id(),
                 'id_unidad_transporte' => $this->id_unidad_transporte,
@@ -108,13 +657,26 @@ class Create extends Component
                 'rendimiento_estimado' => $this->rendimiento_estimado,
             ]);
 
-            session()->flash('success', 'Solicitud creada exitosamente con número: ' . $numeroSolicitud);
+            // Enviar notificaciones
+            $notificacionService = app(NotificacionSolicitudService::class);
+            
+            if ($this->urgente) {
+                $notificacionService->notificarSolicitudUrgente($solicitud);
+            } else {
+                $notificacionService->notificarNuevaSolicitud($solicitud);
+            }
+
+            session()->flash('success', 'Solicitud creada exitosamente con número: ' . $numeroSolicitud . 
+                ($this->urgente ? ' (URGENTE - Supervisores notificados)' : ''));
             
             $this->limpiarFormulario();
             $this->mostrarFormulario = false;
             
             // Refrescar la lista de solicitudes del componente padre
             $this->dispatch('solicitudCreada');
+            
+            // Emitir evento global para actualizar notificaciones
+            $this->dispatch('solicitudCreada')->to('components.notification-bell');
 
         } catch (\Exception $e) {
             session()->flash('error', 'Error al crear la solicitud: ' . $e->getMessage());
@@ -123,17 +685,128 @@ class Create extends Component
 
     public function render()
     {
-        $unidadesTransporte = UnidadTransporte::where('estado_operativo', 'Activo')
-            ->orderBy('placa')
-            ->get();
+        try {
+            // Obtener unidades de transporte con información completa mediante JOINs
+            $unidadesTransporte = UnidadTransporte::select([
+                'unidad_transportes.*',
+                'tipo_vehiculos.nombre as tipo_vehiculo_nombre',
+                'tipo_vehiculos.categoria as tipo_vehiculo_categoria',
+                'tipo_vehiculos.consumo_promedio_ciudad',
+                'tipo_vehiculos.consumo_promedio_carretera',
+                'tipo_combustibles.nombre as tipo_combustible_nombre',
+                'tipo_combustibles.precio_referencial',
+                'unidades_organizacionales.nombre_unidad',
+                'unidades_organizacionales.codigo_unidad as unidad_codigo',
+                'usuarios.nombre as conductor_nombre',
+                'usuarios.apellido_paterno as conductor_apellido'
+            ])
+            ->join('tipo_vehiculos', 'unidad_transportes.id_tipo_vehiculo', '=', 'tipo_vehiculos.id_tipo_vehiculo')
+            ->join('tipo_combustibles', 'unidad_transportes.id_tipo_combustible', '=', 'tipo_combustibles.id_tipo_combustible')
+            ->join('unidades_organizacionales', 'unidad_transportes.id_unidad_organizacional', '=', 'unidades_organizacionales.id_unidad_organizacional')
+            ->leftJoin('usuarios', 'unidad_transportes.id_conductor_asignado', '=', 'usuarios.id_usuario')
+            ->where('unidad_transportes.estado_operativo', 'Operativo')
+            ->where('unidad_transportes.activo', true)
+            ->where('tipo_vehiculos.activo', true)
+            ->where('tipo_combustibles.activo', true)
+            ->where('unidades_organizacionales.activa', true)
+            ->orderBy('unidad_transportes.placa')
+            ->get()
+            ->map(function ($unidad) {
+                // Agregar campos calculados para compatibilidad
+                $unidad->tipoVehiculo = (object) [
+                    'nombre' => $unidad->tipo_vehiculo_nombre,
+                    'categoria' => $unidad->tipo_vehiculo_categoria,
+                    'consumo_promedio_ciudad' => $unidad->consumo_promedio_ciudad,
+                    'consumo_promedio_carretera' => $unidad->consumo_promedio_carretera
+                ];
+                
+                $unidad->tipoCombustible = (object) [
+                    'nombre' => $unidad->tipo_combustible_nombre,
+                    'precio_referencial' => $unidad->precio_referencial
+                ];
+                
+                $unidad->unidadOrganizacional = (object) [
+                    'nombre_unidad' => $unidad->nombre_unidad,
+                    'codigo_unidad' => $unidad->unidad_codigo
+                ];
+                
+                $unidad->conductorAsignado = $unidad->conductor_nombre ? (object) [
+                    'full_name' => $unidad->conductor_nombre . ' ' . $unidad->conductor_apellido
+                ] : null;
+                
+                return $unidad;
+            });
 
-        $categoriasProgramaticas = CategoriaProgramatica::orderBy('descripcion')->get();
-        $fuentesOrganismo = FuenteOrganismoFinanciero::orderBy('descripcion')->get();
+            // Obtener categorías programáticas con información de presupuestos
+            $categoriasProgramaticas = CategoriaProgramatica::select([
+                'categoria_programaticas.*',
+                \DB::raw('COUNT(presupuestos.id_presupuesto) as total_presupuestos'),
+                \DB::raw('SUM(presupuestos.presupuesto_actual) as presupuesto_total'),
+                \DB::raw('SUM(presupuestos.saldo_disponible) as saldo_total')
+            ])
+            ->leftJoin('presupuestos', function($join) {
+                $join->on('categoria_programaticas.id_cat_programatica', '=', 'presupuestos.id_cat_programatica')
+                     ->where('presupuestos.activo', true)
+                     ->where('presupuestos.anio_fiscal', date('Y'));
+            })
+            ->where('categoria_programaticas.activo', true)
+            ->groupBy('categoria_programaticas.id_cat_programatica')
+            ->orderBy('categoria_programaticas.codigo')
+            ->get();
+                
+            // Obtener fuentes de financiamiento con información de presupuestos
+            $fuentesOrganismo = FuenteOrganismoFinanciero::select([
+                'fuente_organismo_financieros.*',
+                \DB::raw('COUNT(presupuestos.id_presupuesto) as total_presupuestos'),
+                \DB::raw('SUM(presupuestos.presupuesto_actual) as presupuesto_total'),
+                \DB::raw('SUM(presupuestos.saldo_disponible) as saldo_total')
+            ])
+            ->leftJoin('presupuestos', function($join) {
+                $join->on('fuente_organismo_financieros.id_fuente_org_fin', '=', 'presupuestos.id_fuente_org_fin')
+                     ->where('presupuestos.activo', true)
+                     ->where('presupuestos.anio_fiscal', date('Y'));
+            })
+            ->where('fuente_organismo_financieros.activo', true)
+            ->groupBy('fuente_organismo_financieros.id_fuente_org_fin')
+            ->orderBy('fuente_organismo_financieros.codigo')
+            ->get();
+            
+        } catch (\Exception $e) {
+            // Fallback data para desarrollo cuando no hay conexión DB
+            $unidadesTransporte = collect([
+                (object) [
+                    'id' => 1, 
+                    'placa' => 'ABC-123', 
+                    'marca' => 'Toyota', 
+                    'modelo' => 'Hilux', 
+                    'anio' => 2020,
+                    'capacidad_tanque' => 80,
+                    'kilometraje_actual' => 125000,
+                    'estado_operativo' => 'Operativo',
+                    'tipoVehiculo' => (object) ['nombre' => 'Camioneta', 'categoria' => 'Transporte'],
+                    'tipoCombustible' => (object) ['nombre' => 'Diésel', 'precio_referencial' => 3.74],
+                    'unidadOrganizacional' => (object) ['nombre_unidad' => 'Administración Central'],
+                    'conductorAsignado' => (object) ['full_name' => 'Juan Pérez']
+                ],
+            ]);
+            
+            $categoriasProgramaticas = collect([
+                (object) ['id' => 1, 'codigo' => 'CAT-001', 'descripcion' => 'Administración General', 'activo' => true, 'total_presupuestos' => 0],
+            ]);
+            
+            $fuentesOrganismo = collect([
+                (object) ['id' => 1, 'codigo' => 'FF-001', 'descripcion' => 'Recursos Propios', 'total_presupuestos' => 0],
+            ]);
+            
+            Log::warning('Usando datos de fallback debido a error de conexión: ' . $e->getMessage());
+        }
 
         return view('livewire.solicitud.create', [
             'unidadesTransporte' => $unidadesTransporte,
             'categoriasProgramaticas' => $categoriasProgramaticas,
             'fuentesOrganismo' => $fuentesOrganismo,
+            'presupuestoInfo' => $this->presupuestoInfo,
+            'unidadOrganizacionalInfo' => $this->unidadOrganizacionalInfo,
         ]);
     }
 }

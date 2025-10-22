@@ -75,6 +75,9 @@ class Show extends Component
             // Recargar la solicitud para mostrar los cambios
             $this->solicitud = $this->solicitud->fresh()->load(['usuario', 'creador', 'supervisorAsignado', 'aprobador']);
             
+            // Emitir evento para actualizar notificaciones
+            $this->dispatch('solicitudProcesada')->to('components.notification-bell');
+            
         } catch (\Exception $e) {
             session()->flash('error', 'Error al procesar la solicitud: ' . $e->getMessage());
         }

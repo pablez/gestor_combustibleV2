@@ -6,6 +6,8 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 use Illuminate\Support\Facades\Gate;
 use App\Models\UnidadOrganizacional;
 use App\Policies\UnidadOrganizacionalPolicy;
+use App\Models\SolicitudCombustible;
+use App\Policies\SolicitudCombustiblePolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -16,6 +18,7 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         UnidadOrganizacional::class => UnidadOrganizacionalPolicy::class,
+        SolicitudCombustible::class => SolicitudCombustiblePolicy::class,
     ];
 
     /**

@@ -62,7 +62,49 @@
                             </svg>
                         </button>
                         <h1 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Sistema</h1>
-                        <div></div>
+                        <!-- Notificaciones móvil -->
+                        <livewire:components.notification-bell />
+                    </div>
+                </header>
+
+                <!-- Desktop Header -->
+                <header class="hidden md:block bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between px-6 py-4">
+                        <div class="flex items-center space-x-4">
+                            <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                                @if (isset($pageTitle))
+                                    {{ $pageTitle }}
+                                @else
+                                    Sistema de Gestión de Combustible
+                                @endif
+                            </h1>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4">
+                            <!-- Notificaciones desktop -->
+                            <livewire:components.notification-bell />
+                            
+                            <!-- Información del usuario -->
+                            @php
+                                $user = auth()->user();
+                                $avatarUrl = $user->profile_photo_url ?? null;
+                                $initials = trim(collect(explode(' ', $user->name))->map(fn($p) => $p[0] ?? '')->take(2)->join('')) ?: strtoupper(substr($user->email ?? '', 0, 1));
+                                $displayName = $user->full_name ?? $user->name;
+                                $role = $user->primary_role ? str_replace('_', ' ', $user->primary_role) : 'Sin rol';
+                            @endphp
+                            
+                            <div class="flex items-center space-x-3">
+                                @if($avatarUrl)
+                                    <img src="{{ $avatarUrl }}" alt="{{ $user->name }}" class="h-8 w-8 rounded-full object-cover" />
+                                @else
+                                    <div class="h-8 w-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-medium text-sm">{{ strtoupper($initials) }}</div>
+                                @endif
+                                <div class="hidden lg:block">
+                                    <div class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $displayName }}</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $role }}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </header>
 

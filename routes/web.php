@@ -16,6 +16,7 @@ Route::view('profile', 'profile')
     ->name('profile');
 
 require __DIR__.'/auth.php';
+require __DIR__.'/debug.php';
 
 // Imports de componentes Livewire organizados por módulos
 use App\Livewire\DashboardKpis;

@@ -99,6 +99,14 @@ class SolicitudCombustible extends Model
             'id_usuario_aprobador' => $usuario_aprobador,
             'observaciones_aprobacion' => $observaciones,
         ]);
+
+        // Enviar notificaciones
+        try {
+            $notificacionService = app(\App\Services\NotificacionSolicitudService::class);
+            $notificacionService->notificarSolicitudAprobada($this);
+        } catch (\Exception $e) {
+            \Log::error('Error al enviar notificación de solicitud aprobada: ' . $e->getMessage());
+        }
     }
 
     public function rechazar($usuario_aprobador, $observaciones)
@@ -109,5 +117,28 @@ class SolicitudCombustible extends Model
             'id_usuario_aprobador' => $usuario_aprobador,
             'observaciones_aprobacion' => $observaciones,
         ]);
+
+        // Enviar notificaciones
+        try {
+            $notificacionService = app(\App\Services\NotificacionSolicitudService::class);
+            $notificacionService->notificarSolicitudRechazada($this);
+        } catch (\Exception $e) {
+            \Log::error('Error al enviar notificación de solicitud rechazada: ' . $e->getMessage());
+        }
+    }
+
+    public function marcarComoDespachada()
+    {
+        $this->update([
+            'estado_solicitud' => 'Despachada'
+        ]);
+
+        // Enviar notificaciones
+        try {
+            $notificacionService = app(\App\Services\NotificacionSolicitudService::class);
+            $notificacionService->notificarDespachado($this);
+        } catch (\Exception $e) {
+            \Log::error('Error al enviar notificación de despacho: ' . $e->getMessage());
+        }
     }
 }
